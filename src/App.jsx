@@ -635,43 +635,52 @@ function AuthPage({mode, setPage, onAuth, showToast}) {
 
 
 // ─── FOOTER ───────────────────────────────────────────────────────────────────
-function Footer() {
+function Footer({setPage}) {
+  const NavLink = ({label, onClick}) => (
+    <button onClick={onClick} style={{display:"block",background:"none",border:"none",cursor:"pointer",fontSize:"0.78rem",color:"var(--mid)",marginBottom:"0.5rem",textAlign:"left",padding:0,fontFamily:"'DM Sans',sans-serif",transition:"color .15s"}}
+      onMouseEnter={e=>e.target.style.color="var(--sand)"}
+      onMouseLeave={e=>e.target.style.color="var(--mid)"}
+    >{label}</button>
+  );
   return (
-    <footer style={{background:"var(--ash)",borderTop:"1px solid var(--line)",padding:"2.5rem 3rem 2rem",marginTop:"auto"}}>
+    <footer style={{background:"var(--ash)",borderTop:"1px solid var(--line)",padding:"3rem 3rem 2rem"}}>
       <div style={{maxWidth:1200,margin:"0 auto"}}>
-        <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr",gap:"2rem",marginBottom:"2rem"}}>
+        <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr",gap:"3rem",marginBottom:"2.5rem"}}>
           <div>
             <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.8rem",color:"var(--sand)",letterSpacing:"0.1em",marginBottom:"0.75rem"}}>
               SURPL<span style={{color:"var(--rust)"}}>E</span>NTA
             </div>
-            <p style={{fontSize:"0.8rem",color:"var(--mid)",lineHeight:1.8,maxWidth:"28ch"}}>El marketplace de materiales de construcción de Panamá. Compra y vende con pago protegido.</p>
+            <p style={{fontSize:"0.8rem",color:"var(--mid)",lineHeight:1.9,maxWidth:"30ch",marginBottom:"1.5rem"}}>El marketplace de materiales de construcción de Panamá. Compra y vende con pago protegido por escrow.</p>
+            <div style={{fontFamily:"'Space Mono',monospace",fontSize:"0.6rem",color:"var(--mid)",letterSpacing:"0.05em"}}>surplenta.com.pa</div>
           </div>
           <div>
-            <div style={{fontFamily:"'Space Mono',monospace",fontSize:"0.6rem",letterSpacing:"0.15em",textTransform:"uppercase",color:"var(--steel)",marginBottom:"1rem"}}>Marketplace</div>
-            {["Explorar materiales","Publicar anuncio","Cómo funciona","Categorías"].map(l=>(
-              <div key={l} style={{fontSize:"0.78rem",color:"var(--mid)",marginBottom:"0.5rem",cursor:"pointer"}}>{l}</div>
-            ))}
+            <div style={{fontFamily:"'Space Mono',monospace",fontSize:"0.58rem",letterSpacing:"0.18em",textTransform:"uppercase",color:"var(--steel)",marginBottom:"1.2rem"}}>Marketplace</div>
+            <NavLink label="Explorar materiales" onClick={()=>setPage("browse")}/>
+            <NavLink label="Publicar anuncio" onClick={()=>setPage("publish")}/>
+            <NavLink label="Mis ordenes" onClick={()=>setPage("orders")}/>
+            <NavLink label="Mi cuenta" onClick={()=>setPage("dashboard")}/>
           </div>
           <div>
-            <div style={{fontFamily:"'Space Mono',monospace",fontSize:"0.6rem",letterSpacing:"0.15em",textTransform:"uppercase",color:"var(--steel)",marginBottom:"1rem"}}>Soporte</div>
-            {["Centro de ayuda","Cómo pagar","Política de devoluciones","Reportar un problema"].map(l=>(
-              <div key={l} style={{fontSize:"0.78rem",color:"var(--mid)",marginBottom:"0.5rem",cursor:"pointer"}}>{l}</div>
-            ))}
+            <div style={{fontFamily:"'Space Mono',monospace",fontSize:"0.58rem",letterSpacing:"0.18em",textTransform:"uppercase",color:"var(--steel)",marginBottom:"1.2rem"}}>Soporte</div>
+            <NavLink label="Como funciona" onClick={()=>setPage("how")}/>
+            <NavLink label="Como pagar" onClick={()=>setPage("how")}/>
+            <NavLink label="Sistema escrow" onClick={()=>setPage("how")}/>
+            <NavLink label="Contacto" onClick={()=>setPage("contact")}/>
           </div>
           <div>
-            <div style={{fontFamily:"'Space Mono',monospace",fontSize:"0.6rem",letterSpacing:"0.15em",textTransform:"uppercase",color:"var(--steel)",marginBottom:"1rem"}}>Legal</div>
-            {["Términos de uso","Política de privacidad","Política de cookies","Aviso legal"].map(l=>(
-              <div key={l} style={{fontSize:"0.78rem",color:"var(--mid)",marginBottom:"0.5rem",cursor:"pointer"}}>{l}</div>
-            ))}
+            <div style={{fontFamily:"'Space Mono',monospace",fontSize:"0.58rem",letterSpacing:"0.18em",textTransform:"uppercase",color:"var(--steel)",marginBottom:"1.2rem"}}>Legal</div>
+            <NavLink label="Terminos de uso" onClick={()=>setPage("terms")}/>
+            <NavLink label="Privacidad" onClick={()=>setPage("privacy")}/>
+            <NavLink label="Aviso legal" onClick={()=>setPage("legal")}/>
           </div>
         </div>
         <div style={{borderTop:"1px solid var(--line)",paddingTop:"1.5rem",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"1rem"}}>
-          <div style={{fontFamily:"'Space Mono',monospace",fontSize:"0.62rem",color:"var(--mid)"}}>
-            © 2026 Surplenta. Todos los derechos reservados. · <span style={{color:"var(--steel)"}}>surplenta.com.pa</span>
+          <div style={{fontFamily:"'Space Mono',monospace",fontSize:"0.6rem",color:"var(--mid)",letterSpacing:"0.05em"}}>
+            © 2026 Surplenta. Todos los derechos reservados.
           </div>
-          <div style={{display:"flex",gap:"1.5rem",alignItems:"center"}}>
-            <div style={{fontFamily:"'Space Mono',monospace",fontSize:"0.58rem",color:"var(--mid)",display:"flex",alignItems:"center",gap:"0.4rem"}}>🔒 Pagos protegidos por Stripe</div>
-            <div style={{fontFamily:"'Space Mono',monospace",fontSize:"0.58rem",color:"var(--mid)",display:"flex",alignItems:"center",gap:"0.4rem"}}>🇵🇦 Hecho en Panamá</div>
+          <div style={{display:"flex",gap:"2rem"}}>
+            <div style={{fontFamily:"'Space Mono',monospace",fontSize:"0.58rem",color:"var(--mid)"}}>Pagos procesados por Stripe</div>
+            <div style={{fontFamily:"'Space Mono',monospace",fontSize:"0.58rem",color:"var(--mid)"}}>Hecho en Panama</div>
           </div>
         </div>
       </div>
@@ -763,8 +772,13 @@ export default function App() {
       {p==="orders"&&<OrdersPage user={user} showToast={showToast}/>}
       {p==="checkout"&&<CheckoutPage listing={checkoutData?.listing} quantity={checkoutData?.quantity} user={user} setPage={setPage} showToast={showToast}/>}
       {(p==="login"||p==="register")&&<AuthPage mode={p} setPage={setPage} onAuth={setUser} showToast={showToast}/>}
+      {p==="how"&&<HowItWorksPage setPage={setPage}/>}
+      {p==="terms"&&<TermsPage setPage={setPage}/>}
+      {p==="privacy"&&<PrivacyPage setPage={setPage}/>}
+      {p==="legal"&&<TermsPage setPage={setPage}/>}
+      {p==="contact"&&<ContactPage setPage={setPage}/>}
       {toast&&<Toast msg={toast.msg} type={toast.type}/>}
-      <Footer/>
+      <Footer setPage={setPage}/>
     </>
   );
 }
@@ -1098,5 +1112,100 @@ function CheckoutPage({listing, quantity, user, setPage, showToast}) {
         </div>
       </div>
     </div>
+  );
+}
+
+// ─── STATIC PAGES ─────────────────────────────────────────────────────────────
+function StaticPage({title, setPage, children}) {
+  return (
+    <div style={{marginTop:58,maxWidth:760,margin:"58px auto 0",padding:"3rem 2rem 4rem"}}>
+      <button onClick={()=>setPage("home")} style={{...S.ghostBtn,marginBottom:"2rem"}}>← Volver</button>
+      <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"2.5rem",color:"var(--concrete)",marginBottom:"2rem",letterSpacing:"0.03em"}}>{title}</div>
+      <div style={{fontSize:"0.88rem",lineHeight:1.9,color:"var(--mid)"}}>{children}</div>
+    </div>
+  );
+}
+
+function HowItWorksPage({setPage}) {
+  const steps = [
+    ["Crea tu cuenta","Regístrate gratis en menos de un minuto. Solo necesitas tu correo electrónico."],
+    ["Explora o publica","Busca materiales por categoría, precio o ubicación. O publica tu inventario con fotos y precio."],
+    ["Compra con seguridad","Al hacer clic en Comprar ahora, el pago queda retenido en escrow — ni el vendedor ni Surplenta lo toca aún."],
+    ["Confirma la entrega","Cuando recibes el material, confirmas la recepción. El vendedor confirma el envío. Al confirmar ambos, el pago se libera automáticamente."],
+    ["Resolución de disputas","Si hay algún problema, abre una disputa y el equipo de Surplenta mediará en un plazo de 24-48 horas."],
+  ];
+  return (
+    <StaticPage title="COMO FUNCIONA" setPage={setPage}>
+      <div style={{display:"flex",flexDirection:"column",gap:"2rem",marginTop:"1rem"}}>
+        {steps.map(([t,d],i)=>(
+          <div key={i} style={{display:"flex",gap:"1.5rem",alignItems:"flex-start"}}>
+            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"2rem",color:"var(--rust)",lineHeight:1,flexShrink:0,width:36}}>{i+1}</div>
+            <div>
+              <div style={{fontWeight:600,fontSize:"0.95rem",color:"var(--concrete)",marginBottom:6}}>{t}</div>
+              <div style={{fontSize:"0.85rem",color:"var(--mid)",lineHeight:1.8}}>{d}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </StaticPage>
+  );
+}
+
+function TermsPage({setPage}) {
+  return (
+    <StaticPage title="TERMINOS DE USO" setPage={setPage}>
+      <p style={{marginBottom:"1.5rem"}}>Al usar Surplenta aceptas los siguientes términos. Surplenta es un marketplace que conecta compradores y vendedores de materiales de construcción en la República de Panamá.</p>
+      <div style={{fontWeight:600,color:"var(--concrete)",marginBottom:8,marginTop:"1.5rem"}}>1. Uso del servicio</div>
+      <p style={{marginBottom:"1rem"}}>Surplenta es una plataforma de intermediación. No somos propietarios de los materiales listados. La responsabilidad sobre la descripción, calidad y entrega de los productos recae en los vendedores.</p>
+      <div style={{fontWeight:600,color:"var(--concrete)",marginBottom:8,marginTop:"1.5rem"}}>2. Pagos y escrow</div>
+      <p style={{marginBottom:"1rem"}}>Los pagos se procesan a través de Stripe. El dinero queda retenido en escrow hasta que ambas partes confirmen la transacción. Surplenta cobra una comisión del 5% al vendedor por cada transacción exitosa.</p>
+      <div style={{fontWeight:600,color:"var(--concrete)",marginBottom:8,marginTop:"1.5rem"}}>3. ITBMS</div>
+      <p style={{marginBottom:"1rem"}}>Se aplica el Impuesto de Transferencia de Bienes Corporales Muebles y la Prestación de Servicios (ITBMS) del 7% conforme a la legislación panameña vigente.</p>
+      <div style={{fontWeight:600,color:"var(--concrete)",marginBottom:8,marginTop:"1.5rem"}}>4. Disputas</div>
+      <p style={{marginBottom:"1rem"}}>En caso de disputa, Surplenta mediará y emitirá una resolución en un plazo de 24 a 48 horas hábiles. La decisión de Surplenta es final en materia de liberación o devolución de fondos en escrow.</p>
+      <div style={{fontWeight:600,color:"var(--concrete)",marginBottom:8,marginTop:"1.5rem"}}>5. Jurisdicción</div>
+      <p>Este acuerdo se rige por las leyes de la República de Panamá. Cualquier controversia se resolverá ante los tribunales competentes de la Ciudad de Panamá.</p>
+    </StaticPage>
+  );
+}
+
+function PrivacyPage({setPage}) {
+  return (
+    <StaticPage title="POLITICA DE PRIVACIDAD" setPage={setPage}>
+      <p style={{marginBottom:"1.5rem"}}>En Surplenta tomamos la privacidad de tus datos con seriedad. Esta política describe cómo recopilamos, usamos y protegemos tu información.</p>
+      <div style={{fontWeight:600,color:"var(--concrete)",marginBottom:8,marginTop:"1.5rem"}}>Datos que recopilamos</div>
+      <p style={{marginBottom:"1rem"}}>Nombre, correo electrónico, información de pago (procesada por Stripe, nunca almacenada por Surplenta), historial de transacciones y anuncios publicados.</p>
+      <div style={{fontWeight:600,color:"var(--concrete)",marginBottom:8,marginTop:"1.5rem"}}>Uso de los datos</div>
+      <p style={{marginBottom:"1rem"}}>Usamos tus datos para procesar transacciones, enviarte notificaciones relacionadas con tus órdenes y mejorar la plataforma. No vendemos ni compartimos tus datos con terceros para fines comerciales.</p>
+      <div style={{fontWeight:600,color:"var(--concrete)",marginBottom:8,marginTop:"1.5rem"}}>Seguridad</div>
+      <p style={{marginBottom:"1rem"}}>Todos los datos se almacenan de forma segura en Supabase con cifrado en tránsito y en reposo. Los pagos son procesados exclusivamente por Stripe bajo los estándares PCI DSS.</p>
+      <div style={{fontWeight:600,color:"var(--concrete)",marginBottom:8,marginTop:"1.5rem"}}>Contacto</div>
+      <p>Para ejercer tus derechos de acceso, rectificación o eliminación de datos, escríbenos a privacidad@surplenta.com.pa</p>
+    </StaticPage>
+  );
+}
+
+function ContactPage({setPage}) {
+  const [form, setForm] = useState({name:"",email:"",msg:""});
+  const [sent, setSent] = useState(false);
+  return (
+    <StaticPage title="CONTACTO" setPage={setPage}>
+      {sent ? (
+        <div style={{background:"#d1fae5",border:"1px solid #6ee7b7",borderRadius:4,padding:"1.5rem",textAlign:"center"}}>
+          <div style={{fontWeight:600,color:"#065f46",marginBottom:4}}>Mensaje enviado</div>
+          <div style={{fontSize:"0.82rem",color:"#047857"}}>Nos pondremos en contacto contigo en un plazo de 24 horas.</div>
+        </div>
+      ) : (
+        <div style={{maxWidth:480}}>
+          <p style={{marginBottom:"2rem"}}>Tienes preguntas, sugerencias o necesitas ayuda? Escríbenos.</p>
+          <div style={{display:"flex",flexDirection:"column",gap:"1rem"}}>
+            <div><label style={S.formLabel}>Nombre</label><input value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} style={S.formInput} placeholder="Tu nombre"/></div>
+            <div><label style={S.formLabel}>Correo</label><input value={form.email} onChange={e=>setForm(f=>({...f,email:e.target.value}))} type="email" style={S.formInput} placeholder="tu@correo.com"/></div>
+            <div><label style={S.formLabel}>Mensaje</label><textarea value={form.msg} onChange={e=>setForm(f=>({...f,msg:e.target.value}))} style={{...S.formInput,height:120,resize:"vertical"}} placeholder="Como podemos ayudarte?"/></div>
+            <button onClick={()=>{ if(form.name&&form.email&&form.msg) setSent(true); }} style={{...S.primaryBtn,padding:"0.85rem",fontSize:"0.85rem"}}>Enviar mensaje</button>
+          </div>
+        </div>
+      )}
+    </StaticPage>
   );
 }
