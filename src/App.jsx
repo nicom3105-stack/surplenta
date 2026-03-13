@@ -344,8 +344,9 @@ function ListingPage({listing, user, setPage, setActiveChatListing, showToast, s
             {/* RESUMEN */}
             <div style={{background:"var(--sand)",borderRadius:2,padding:"0.75rem 1rem",marginBottom:"1rem",fontSize:"0.8rem"}}>
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}><span style={{color:"var(--mid)"}}>Subtotal</span><span style={{fontWeight:600}}>${(listing.price*qty).toFixed(2)}</span></div>
-              <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}><span style={{color:"var(--mid)"}}>Comisión (5%)</span><span style={{color:"var(--mid)"}}>${(listing.price*qty*0.05).toFixed(2)}</span></div>
-              <div style={{display:"flex",justifyContent:"space-between",borderTop:"1px solid rgba(42,40,37,0.1)",paddingTop:6,marginTop:4}}><span style={{fontWeight:600}}>Total</span><span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.2rem"}}>${(listing.price*qty).toFixed(2)}</span></div>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}><span style={{color:"var(--mid)"}}>ITBMS (7%)</span><span style={{color:"var(--mid)"}}>${(listing.price*qty*0.07).toFixed(2)}</span></div>
+              <div style={{display:"flex",justifyContent:"space-between",borderTop:"1px solid rgba(42,40,37,0.1)",paddingTop:6,marginTop:4}}><span style={{fontWeight:600}}>Total</span><span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.2rem"}}>${(listing.price*qty*1.07).toFixed(2)} USD</span></div>
+              <div style={{fontSize:"0.65rem",color:"var(--mid)",marginTop:4}}>Comisión 5% descontada al vendedor</div>
             </div>
             <button onClick={buyNow} style={{...S.primaryBtn,width:"100%",padding:"0.9rem",fontSize:"0.85rem",borderRadius:2,marginBottom:"0.5rem",display:"flex",alignItems:"center",justifyContent:"center",gap:"0.5rem",background:"#2c6e49"}}>
               💳 Comprar ahora
@@ -873,8 +874,11 @@ function CheckoutPage({listing, quantity, user, setPage, showToast}) {
   const cardRef = useRef(null);
   const mountedRef = useRef(null);
 
-  const total = listing ? (listing.price * quantity).toFixed(2) : "0.00";
+  const subtotal = listing ? (listing.price * quantity).toFixed(2) : "0.00";
+  const tax = listing ? (listing.price * quantity * 0.07).toFixed(2) : "0.00";
+  const total = listing ? (listing.price * quantity * 1.07).toFixed(2) : "0.00";
   const commission = listing ? (listing.price * quantity * 0.05).toFixed(2) : "0.00";
+  const sellerPayout = listing ? (listing.price * quantity * (1 - 0.05)).toFixed(2) : "0.00";
 
   useEffect(() => {
     if (!listing) return;
@@ -890,7 +894,7 @@ function CheckoutPage({listing, quantity, user, setPage, showToast}) {
             document.head.appendChild(s);
           });
         }
-        const pk = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+        const pk = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || import.meta.env.STRIPE_PUBLISHABLE_KEY;
         stripeRef.current = window.Stripe(pk);
 
         const res = await fetch('/api/create-payment-intent', {
@@ -967,7 +971,7 @@ function CheckoutPage({listing, quantity, user, setPage, showToast}) {
         unit_price: listing.price,
         total_amount: parseFloat(total),
         commission: parseFloat(commission),
-        seller_payout: parseFloat(total) - parseFloat(commission),
+        seller_payout: parseFloat(sellerPayout),
         status: 'paid',
       }, { onConflict: 'stripe_session_id' });
       setPaid(true);
@@ -986,7 +990,8 @@ function CheckoutPage({listing, quantity, user, setPage, showToast}) {
         <div style={{background:'var(--sand)',borderRadius:4,padding:'1rem',marginBottom:'1.5rem',fontSize:'0.82rem',textAlign:'left'}}>
           <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}><span style={{color:'var(--mid)'}}>Producto</span><span style={{fontWeight:600}}>{listing.title}</span></div>
           <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}><span style={{color:'var(--mid)'}}>Cantidad</span><span style={{fontWeight:600}}>{quantity} {listing.unit}</span></div>
-          <div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:'var(--mid)'}}>Total pagado</span><span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'1.1rem'}}>${total}</span></div>
+          <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}><span style={{color:'var(--mid)'}}>ITBMS (7%)</span><span style={{fontWeight:500}}>${tax}</span></div>
+          <div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:'var(--mid)'}}>Total pagado</span><span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'1.1rem'}}>${total} USD</span></div>
         </div>
         <button onClick={()=>setPage('orders')} style={{...S.primaryBtn,width:'100%',padding:'0.9rem',fontSize:'0.85rem',marginBottom:'0.5rem'}}>📦 Ver mis órdenes</button>
         <button onClick={()=>setPage('browse')} style={{...S.ghostBtn,width:'100%',padding:'0.7rem',fontSize:'0.78rem',color:'var(--concrete)',border:'1px solid rgba(42,40,37,0.2)'}}>Seguir comprando</button>
@@ -1011,7 +1016,7 @@ function CheckoutPage({listing, quantity, user, setPage, showToast}) {
               <div style={{fontSize:'0.75rem',color:'var(--mid)',marginTop:2}}>{listing.seller_name} · {listing.location}</div>
             </div>
           </div>
-          {[['Precio unitario',`$${Number(listing.price).toFixed(2)} / ${listing.unit}`],['Cantidad',`${quantity} ${listing.unit}`],['Subtotal',`$${total}`],['Comisión Surplenta (5%)',`$${commission}`]].map(([k,v])=>(
+          {[['Precio unitario',`$${Number(listing.price).toFixed(2)} / ${listing.unit}`],['Cantidad',`${quantity} ${listing.unit}`],['Subtotal',`$${subtotal}`],['ITBMS (7%)',`$${tax}`]].map(([k,v])=>(
             <div key={k} style={{display:'flex',justifyContent:'space-between',fontSize:'0.82rem',marginBottom:6}}>
               <span style={{color:'var(--mid)'}}>{k}</span><span style={{fontWeight:500}}>{v}</span>
             </div>
@@ -1019,6 +1024,7 @@ function CheckoutPage({listing, quantity, user, setPage, showToast}) {
           <div style={{display:'flex',justifyContent:'space-between',borderTop:'1px solid rgba(42,40,37,0.1)',paddingTop:10,marginTop:8}}>
             <span style={{fontWeight:700,fontSize:'0.9rem'}}>Total</span>
             <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'1.4rem',color:'var(--concrete)'}}>${total} USD</span>
+            <div style={{fontSize:'0.7rem',color:'var(--mid)',marginTop:4,textAlign:'right'}}>Comisión 5% descontada al vendedor</div>
           </div>
         </div>
 
@@ -1035,7 +1041,7 @@ function CheckoutPage({listing, quantity, user, setPage, showToast}) {
               <div ref={mountedRef} style={{border:'1px solid rgba(42,40,37,0.18)',borderRadius:2,padding:'0.75rem 0.8rem',background:'var(--pale)',marginBottom:'1rem',minHeight:42}}/>
               {cardError && <div style={{color:'#c0392b',fontSize:'0.78rem',marginBottom:'1rem',background:'#fef0ed',padding:'0.5rem 0.75rem',borderRadius:2}}>{cardError}</div>}
               <button onClick={handlePay} disabled={paying||!cardReady} style={{...S.primaryBtn,width:'100%',padding:'0.9rem',fontSize:'0.88rem',background:'#2c6e49',display:'flex',alignItems:'center',justifyContent:'center',gap:'0.5rem',opacity:(paying||!cardReady)?0.7:1}}>
-                {paying?<Spinner light/>:'🔒'} {paying?'Procesando…':`Pagar $${total} USD`}
+                {paying?<Spinner light/>:'🔒'} {paying?'Procesando…':`Pagar $${total} USD (incl. ITBMS)`}
               </button>
               <div style={{textAlign:'center',marginTop:'0.75rem',fontFamily:"'Space Mono',monospace",fontSize:'0.58rem',color:'var(--mid)',display:'flex',alignItems:'center',justifyContent:'center',gap:'0.5rem'}}>
                 🔒 Encriptado con SSL · Powered by Stripe
