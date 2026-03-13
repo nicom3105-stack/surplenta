@@ -712,7 +712,7 @@ export default function App() {
       const {data:{session}} = await supabase.auth.getSession();
       if(session){
         const {data:profile} = await supabase.from("profiles").select("*").eq("id",session.user.id).single();
-        setUser({...session.user,...profile});
+        setUser({...session.user,...profile, role: profile?.role || 'user'});
       }
       const {data:ls} = await supabase.from("listings").select("*").order("created_at",{ascending:false});
       setListings(ls||[]);
@@ -777,6 +777,8 @@ export default function App() {
       {p==="privacy"&&<PrivacyPage setPage={setPage}/>}
       {p==="legal"&&<TermsPage setPage={setPage}/>}
       {p==="contact"&&<ContactPage setPage={setPage}/>}
+      {p==="admin"&&<AdminPanel user={user} setPage={setPage} showToast={showToast}/>}
+      {p==="adminlogin"&&<AdminLoginPage setPage={setPage} onAuth={setUser} showToast={showToast}/>}
       {toast&&<Toast msg={toast.msg} type={toast.type}/>}
       <Footer setPage={setPage}/>
     </>
@@ -1207,5 +1209,329 @@ function ContactPage({setPage}) {
         </div>
       )}
     </StaticPage>
+  );
+}
+
+// ─── ADMIN PANEL ──────────────────────────────────────────────────────────────
+function AdminPanel({user, setPage, showToast}) {
+  const [tab, setTab] = useState("stats");
+  const [stats, setStats] = useState(null);
+  const [listings, setListings] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [disputes, setDisputes] = useState([]);
+  const [config, setConfig] = useState({commission_rate:"0.05", tax_rate:"0.07"});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user || user.role !== 'admin') { setPage('home'); return; }
+    loadAll();
+  }, [user?.id]);
+
+  const loadAll = async () => {
+    setLoading(true);
+    const [ls, os, us, cfg] = await Promise.all([
+      supabase.from('listings').select('*').order('created_at', {ascending:false}),
+      supabase.from('orders').select('*').order('created_at', {ascending:false}),
+      supabase.from('profiles').select('*').order('created_at', {ascending:false}),
+      supabase.from('config').select('*'),
+    ]);
+    const allListings = ls.data || [];
+    const allOrders = os.data || [];
+    const allUsers = us.data || [];
+    setListings(allListings);
+    setOrders(allOrders);
+    setUsers(allUsers);
+    setDisputes(allOrders.filter(o => o.status === 'disputed'));
+    if (cfg.data) {
+      const c = {};
+      cfg.data.forEach(r => c[r.key] = r.value);
+      setConfig(c);
+    }
+    const totalRevenue = allOrders.filter(o=>o.status==='released').reduce((s,o)=>s+Number(o.commission),0);
+    const totalVolume = allOrders.filter(o=>['paid','shipped','delivered','released'].includes(o.status)).reduce((s,o)=>s+Number(o.total_amount),0);
+    setStats({
+      totalListings: allListings.length,
+      activeListings: allListings.filter(l=>!l.removed).length,
+      totalOrders: allOrders.length,
+      paidOrders: allOrders.filter(o=>o.status==='paid').length,
+      completedOrders: allOrders.filter(o=>o.status==='released').length,
+      disputedOrders: allOrders.filter(o=>o.status==='disputed').length,
+      totalUsers: allUsers.length,
+      bannedUsers: allUsers.filter(u=>u.banned).length,
+      totalRevenue,
+      totalVolume,
+    });
+    setLoading(false);
+  };
+
+  const deleteListing = async (id) => {
+    if (!confirm('Eliminar este anuncio?')) return;
+    const {error} = await supabase.from('listings').delete().eq('id', id);
+    if (!error) { setListings(p=>p.filter(l=>l.id!==id)); showToast('Anuncio eliminado'); }
+  };
+
+  const banUser = async (u) => {
+    const reason = u.banned ? null : prompt('Razon del ban:');
+    if (!u.banned && !reason) return;
+    const {error} = await supabase.from('profiles').update({banned:!u.banned, ban_reason:reason}).eq('id', u.id);
+    if (!error) {
+      setUsers(p=>p.map(x=>x.id===u.id?{...x,banned:!u.banned,ban_reason:reason}:x));
+      showToast(u.banned ? 'Usuario desbaneado' : 'Usuario baneado');
+    }
+  };
+
+  const resolveDispute = async (order, resolution, refund) => {
+    const newStatus = refund ? 'refunded' : 'released';
+    const {error} = await supabase.from('orders').update({
+      status: newStatus,
+      admin_resolution: resolution,
+      released_at: new Date().toISOString(),
+    }).eq('id', order.id);
+    if (!error) {
+      setOrders(p=>p.map(o=>o.id===order.id?{...o,status:newStatus,admin_resolution:resolution}:o));
+      setDisputes(p=>p.filter(o=>o.id!==order.id));
+      showToast(refund ? 'Reembolso procesado' : 'Pago liberado al vendedor');
+    }
+  };
+
+  const saveConfig = async () => {
+    await Promise.all(Object.entries(config).map(([key,value]) =>
+      supabase.from('config').update({value, updated_at:new Date().toISOString()}).eq('key', key)
+    ));
+    showToast('Configuracion guardada');
+  };
+
+  const TABS = [['stats','Estadisticas'],['listings','Anuncios'],['orders','Ordenes'],['disputes','Disputas'],['users','Usuarios'],['config','Configuracion']];
+
+  const StatCard = ({label, value, sub, accent}) => (
+    <div style={{background:'#fff',border:'1px solid rgba(42,40,37,0.1)',borderRadius:4,padding:'1.25rem 1.5rem',borderLeft:`3px solid ${accent||'var(--rust)'}`}}>
+      <div style={{fontFamily:"'Space Mono',monospace",fontSize:'0.58rem',letterSpacing:'0.15em',textTransform:'uppercase',color:'var(--mid)',marginBottom:6}}>{label}</div>
+      <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'2rem',color:'var(--concrete)',lineHeight:1}}>{value}</div>
+      {sub&&<div style={{fontSize:'0.72rem',color:'var(--mid)',marginTop:4}}>{sub}</div>}
+    </div>
+  );
+
+  if (!user || user.role !== 'admin') return null;
+
+  return (
+    <div style={{marginTop:58,minHeight:'calc(100vh-58px)',background:'var(--pale)'}}>
+      {/* ADMIN HEADER */}
+      <div style={{background:'var(--ash)',borderBottom:'1px solid var(--line)',padding:'1rem 2rem',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <div>
+          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'1.4rem',color:'var(--sand)',letterSpacing:'0.1em'}}>PANEL DE ADMINISTRACION</div>
+          <div style={{fontFamily:"'Space Mono',monospace",fontSize:'0.58rem',color:'var(--mid)',marginTop:2}}>Surplenta · Admin: {user.name}</div>
+        </div>
+        {disputes.length > 0 && (
+          <div style={{background:'#ef4444',color:'#fff',fontFamily:"'Space Mono',monospace",fontSize:'0.62rem',padding:'0.4rem 0.9rem',borderRadius:2}}>
+            {disputes.length} disputa{disputes.length>1?'s':''} pendiente{disputes.length>1?'s':''}
+          </div>
+        )}
+      </div>
+
+      {/* TABS */}
+      <div style={{background:'#fff',borderBottom:'1px solid rgba(42,40,37,0.1)',padding:'0 2rem',display:'flex',gap:0}}>
+        {TABS.map(([v,l])=>(
+          <button key={v} onClick={()=>setTab(v)} style={{fontFamily:"'Space Mono',monospace",fontSize:'0.62rem',letterSpacing:'0.08em',textTransform:'uppercase',padding:'0.85rem 1.2rem',background:'none',border:'none',borderBottom:tab===v?'2px solid var(--rust)':'2px solid transparent',color:tab===v?'var(--rust)':'var(--mid)',cursor:'pointer',position:'relative'}}>
+            {l}
+            {v==='disputes'&&disputes.length>0&&<span style={{position:'absolute',top:8,right:4,background:'#ef4444',color:'#fff',borderRadius:'50%',width:14,height:14,fontSize:'0.5rem',display:'flex',alignItems:'center',justifyContent:'center'}}>{disputes.length}</span>}
+          </button>
+        ))}
+      </div>
+
+      <div style={{padding:'2rem',maxWidth:1200,margin:'0 auto'}}>
+        {loading ? <div style={{display:'flex',justifyContent:'center',padding:'4rem'}}><Spinner/></div> : <>
+
+        {/* STATS */}
+        {tab==='stats'&&stats&&(
+          <div>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:'1rem',marginBottom:'2rem'}}>
+              <StatCard label="Volumen total" value={`$${stats.totalVolume.toFixed(0)}`} sub="en ordenes procesadas" accent="#2c6e49"/>
+              <StatCard label="Comisiones ganadas" value={`$${stats.totalRevenue.toFixed(2)}`} sub="ordenes completadas" accent="var(--rust)"/>
+              <StatCard label="Ordenes totales" value={stats.totalOrders} sub={`${stats.completedOrders} completadas`}/>
+              <StatCard label="En proceso" value={stats.paidOrders} sub="esperando confirmacion" accent="#f59e0b"/>
+              <StatCard label="Disputas activas" value={stats.disputedOrders} sub="requieren atencion" accent="#ef4444"/>
+              <StatCard label="Anuncios activos" value={stats.activeListings} sub={`${stats.totalListings} total`} accent="#8b5cf6"/>
+              <StatCard label="Usuarios" value={stats.totalUsers} sub={`${stats.bannedUsers} baneados`}/>
+            </div>
+            <div style={{background:'#fff',border:'1px solid rgba(42,40,37,0.1)',borderRadius:4,padding:'1.5rem'}}>
+              <div style={{fontFamily:"'Space Mono',monospace",fontSize:'0.62rem',letterSpacing:'0.12em',textTransform:'uppercase',color:'var(--mid)',marginBottom:'1rem'}}>Ultimas 5 ordenes</div>
+              {orders.slice(0,5).map(o=>(
+                <div key={o.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0.75rem 0',borderBottom:'1px solid rgba(42,40,37,0.06)',fontSize:'0.82rem'}}>
+                  <div>
+                    <div style={{fontWeight:600,color:'var(--concrete)'}}>{o.listing_title}</div>
+                    <div style={{fontSize:'0.72rem',color:'var(--mid)',marginTop:2}}>{o.buyer_email} → {o.seller_name}</div>
+                  </div>
+                  <div style={{textAlign:'right'}}>
+                    <div style={{fontWeight:700,color:'var(--concrete)'}}>${Number(o.total_amount).toFixed(2)}</div>
+                    <div style={{fontSize:'0.68rem',color:'var(--mid)',marginTop:2}}>{o.status}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* LISTINGS */}
+        {tab==='listings'&&(
+          <div>
+            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'1.3rem',color:'var(--concrete)',marginBottom:'1rem'}}>TODOS LOS ANUNCIOS ({listings.length})</div>
+            <div style={{background:'#fff',border:'1px solid rgba(42,40,37,0.1)',borderRadius:4,overflow:'hidden'}}>
+              {listings.map((l,i)=>(
+                <div key={l.id} style={{display:'grid',gridTemplateColumns:'1fr auto auto auto',gap:'1rem',alignItems:'center',padding:'0.9rem 1.25rem',borderBottom:i<listings.length-1?'1px solid rgba(42,40,37,0.06)':'none'}}>
+                  <div>
+                    <div style={{fontWeight:600,fontSize:'0.85rem',color:'var(--concrete)'}}>{l.title}</div>
+                    <div style={{fontSize:'0.72rem',color:'var(--mid)',marginTop:2}}>{l.seller_name} · {l.category} · ${l.price}/{l.unit}</div>
+                  </div>
+                  <div style={{fontFamily:"'Space Mono',monospace",fontSize:'0.62rem',color:'var(--mid)'}}>{l.location}</div>
+                  <div style={{fontFamily:"'Space Mono',monospace",fontSize:'0.6rem',color:'var(--mid)'}}>{new Date(l.created_at).toLocaleDateString('en-US')}</div>
+                  <button onClick={()=>deleteListing(l.id)} style={{...S.ghostBtn,fontSize:'0.62rem',color:'#ef4444',border:'1px solid #fca5a5',padding:'0.3rem 0.7rem'}}>Eliminar</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ORDERS */}
+        {tab==='orders'&&(
+          <div>
+            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'1.3rem',color:'var(--concrete)',marginBottom:'1rem'}}>TODAS LAS ORDENES ({orders.length})</div>
+            <div style={{background:'#fff',border:'1px solid rgba(42,40,37,0.1)',borderRadius:4,overflow:'hidden'}}>
+              {orders.map((o,i)=>(
+                <div key={o.id} style={{display:'grid',gridTemplateColumns:'1fr auto auto auto',gap:'1rem',alignItems:'center',padding:'0.9rem 1.25rem',borderBottom:i<orders.length-1?'1px solid rgba(42,40,37,0.06)':'none'}}>
+                  <div>
+                    <div style={{fontWeight:600,fontSize:'0.85rem',color:'var(--concrete)'}}>{o.listing_title}</div>
+                    <div style={{fontSize:'0.72rem',color:'var(--mid)',marginTop:2}}>Comprador: {o.buyer_email} · Vendedor: {o.seller_name}</div>
+                  </div>
+                  <div style={{fontWeight:700,fontSize:'0.85rem',color:'var(--concrete)'}}>${Number(o.total_amount).toFixed(2)}</div>
+                  <div style={{fontFamily:"'Space Mono',monospace",fontSize:'0.6rem',padding:'0.25rem 0.6rem',borderRadius:2,background:o.status==='released'?'#d1fae5':o.status==='disputed'?'#fee2e2':o.status==='paid'?'#dbeafe':'#f3f4f6',color:o.status==='released'?'#065f46':o.status==='disputed'?'#991b1b':o.status==='paid'?'#1e40af':'#374151'}}>{o.status}</div>
+                  <div style={{fontFamily:"'Space Mono',monospace",fontSize:'0.6rem',color:'var(--mid)'}}>{new Date(o.created_at).toLocaleDateString('en-US')}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* DISPUTES */}
+        {tab==='disputes'&&(
+          <div>
+            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'1.3rem',color:'var(--concrete)',marginBottom:'1rem'}}>DISPUTAS ACTIVAS ({disputes.length})</div>
+            {disputes.length===0 ? (
+              <div style={{background:'#fff',border:'1px solid rgba(42,40,37,0.1)',borderRadius:4,padding:'3rem',textAlign:'center',color:'var(--mid)',fontSize:'0.85rem'}}>No hay disputas activas.</div>
+            ) : disputes.map(o=>(
+              <div key={o.id} style={{background:'#fff',border:'1px solid #fca5a5',borderRadius:4,padding:'1.5rem',marginBottom:'1rem'}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'1rem'}}>
+                  <div>
+                    <div style={{fontWeight:700,fontSize:'0.95rem',color:'var(--concrete)'}}>{o.listing_title}</div>
+                    <div style={{fontSize:'0.75rem',color:'var(--mid)',marginTop:3}}>Comprador: {o.buyer_email} · Vendedor: {o.seller_name} · Total: ${Number(o.total_amount).toFixed(2)}</div>
+                  </div>
+                  <div style={{fontFamily:"'Space Mono',monospace",fontSize:'0.6rem',color:'#991b1b'}}>{new Date(o.created_at).toLocaleDateString('en-US')}</div>
+                </div>
+                <div style={{background:'#fee2e2',borderRadius:2,padding:'0.75rem',marginBottom:'1rem',fontSize:'0.8rem',color:'#991b1b'}}>Razon: {o.dispute_reason}</div>
+                <div style={{display:'flex',gap:'0.75rem',flexWrap:'wrap'}}>
+                  <button onClick={()=>{const r=prompt('Resolucion (pago liberado al vendedor):');if(r)resolveDispute(o,r,false);}} style={{...S.primaryBtn,padding:'0.5rem 1rem',fontSize:'0.72rem',background:'#2c6e49'}}>Liberar pago al vendedor</button>
+                  <button onClick={()=>{const r=prompt('Resolucion (reembolso al comprador):');if(r)resolveDispute(o,r,true);}} style={{...S.primaryBtn,padding:'0.5rem 1rem',fontSize:'0.72rem',background:'#ef4444'}}>Reembolsar al comprador</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* USERS */}
+        {tab==='users'&&(
+          <div>
+            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'1.3rem',color:'var(--concrete)',marginBottom:'1rem'}}>USUARIOS ({users.length})</div>
+            <div style={{background:'#fff',border:'1px solid rgba(42,40,37,0.1)',borderRadius:4,overflow:'hidden'}}>
+              {users.map((u,i)=>(
+                <div key={u.id} style={{display:'grid',gridTemplateColumns:'1fr auto auto auto',gap:'1rem',alignItems:'center',padding:'0.9rem 1.25rem',borderBottom:i<users.length-1?'1px solid rgba(42,40,37,0.06)':'none',opacity:u.banned?0.6:1}}>
+                  <div>
+                    <div style={{fontWeight:600,fontSize:'0.85rem',color:'var(--concrete)'}}>{u.name} {u.role==='admin'&&<span style={{fontFamily:"'Space Mono',monospace",fontSize:'0.55rem',background:'var(--rust)',color:'#fff',padding:'0.15rem 0.4rem',borderRadius:2,marginLeft:6}}>ADMIN</span>}</div>
+                    <div style={{fontSize:'0.72rem',color:'var(--mid)',marginTop:2}}>{u.email} · Desde {new Date(u.created_at).toLocaleDateString('en-US')}</div>
+                    {u.ban_reason&&<div style={{fontSize:'0.68rem',color:'#ef4444',marginTop:2}}>Baneado: {u.ban_reason}</div>}
+                  </div>
+                  <div style={{fontFamily:"'Space Mono',monospace",fontSize:'0.6rem',color:u.banned?'#ef4444':'#2c6e49'}}>{u.banned?'BANEADO':'ACTIVO'}</div>
+                  <div style={{fontFamily:"'Space Mono',monospace",fontSize:'0.6rem',color:'var(--mid)',textTransform:'uppercase'}}>{u.role}</div>
+                  {u.role!=='admin'&&<button onClick={()=>banUser(u)} style={{...S.ghostBtn,fontSize:'0.62rem',color:u.banned?'#2c6e49':'#ef4444',border:`1px solid ${u.banned?'#6ee7b7':'#fca5a5'}`,padding:'0.3rem 0.7rem'}}>{u.banned?'Desbanear':'Banear'}</button>}
+                  {u.role==='admin'&&<div style={{width:60}}/>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* CONFIG */}
+        {tab==='config'&&(
+          <div style={{maxWidth:480}}>
+            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'1.3rem',color:'var(--concrete)',marginBottom:'1.5rem'}}>CONFIGURACION DE PLATAFORMA</div>
+            <div style={{background:'#fff',border:'1px solid rgba(42,40,37,0.1)',borderRadius:4,padding:'1.5rem',display:'flex',flexDirection:'column',gap:'1.25rem'}}>
+              <div>
+                <label style={S.formLabel}>Comision de Surplenta (%)</label>
+                <input type="number" step="0.01" min="0" max="0.5" value={(parseFloat(config.commission_rate||0.05)*100).toFixed(1)}
+                  onChange={e=>setConfig(c=>({...c,commission_rate:(parseFloat(e.target.value)/100).toString()}))}
+                  style={S.formInput}/>
+                <div style={{fontSize:'0.72rem',color:'var(--mid)',marginTop:4}}>Porcentaje que Surplenta descuenta del pago al vendedor. Actual: {(parseFloat(config.commission_rate||0.05)*100).toFixed(1)}%</div>
+              </div>
+              <div>
+                <label style={S.formLabel}>ITBMS (%)</label>
+                <input type="number" step="0.01" min="0" max="0.3" value={(parseFloat(config.tax_rate||0.07)*100).toFixed(1)}
+                  onChange={e=>setConfig(c=>({...c,tax_rate:(parseFloat(e.target.value)/100).toString()}))}
+                  style={S.formInput}/>
+                <div style={{fontSize:'0.72rem',color:'var(--mid)',marginTop:4}}>Impuesto aplicado al comprador. Ley panameña: 7%</div>
+              </div>
+              <div>
+                <label style={S.formLabel}>Pago minimo al vendedor (USD)</label>
+                <input type="number" step="1" min="1" value={config.min_payout||10}
+                  onChange={e=>setConfig(c=>({...c,min_payout:e.target.value}))}
+                  style={S.formInput}/>
+              </div>
+              <button onClick={saveConfig} style={{...S.primaryBtn,padding:'0.85rem',fontSize:'0.85rem'}}>Guardar cambios</button>
+            </div>
+          </div>
+        )}
+
+        </>}
+      </div>
+    </div>
+  );
+}
+
+// ─── ADMIN LOGIN ───────────────────────────────────────────────────────────────
+function AdminLoginPage({setPage, onAuth, showToast}) {
+  const [form, setForm] = useState({email:'',password:''});
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState('');
+
+  const submit = async () => {
+    setErr(''); setLoading(true);
+    const {data, error} = await supabase.auth.signInWithPassword({email:form.email, password:form.password});
+    if (error) { setErr('Credenciales incorrectas'); setLoading(false); return; }
+    const {data:profile} = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
+    if (!profile || profile.role !== 'admin') {
+      await supabase.auth.signOut();
+      setErr('No tienes permisos de administrador.');
+      setLoading(false); return;
+    }
+    onAuth({...data.user, ...profile});
+    setPage('admin');
+    showToast('Bienvenido al panel de administracion');
+    setLoading(false);
+  };
+
+  return (
+    <div style={{minHeight:'100vh',background:'var(--ash)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <div style={{background:'#fff',borderRadius:4,padding:'2.5rem',width:'100%',maxWidth:380,boxShadow:'0 20px 60px rgba(0,0,0,0.3)'}}>
+        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'1.8rem',color:'var(--concrete)',marginBottom:'0.25rem',letterSpacing:'0.05em'}}>ADMIN</div>
+        <div style={{fontFamily:"'Space Mono',monospace",fontSize:'0.6rem',letterSpacing:'0.15em',color:'var(--mid)',textTransform:'uppercase',marginBottom:'2rem'}}>Surplenta · Acceso restringido</div>
+        {err&&<div style={{background:'#fef0ed',border:'1px solid #f0a898',borderRadius:2,padding:'0.65rem',marginBottom:'1rem',fontSize:'0.8rem',color:'#c0392b'}}>{err}</div>}
+        <div style={{display:'flex',flexDirection:'column',gap:'1rem'}}>
+          <div><label style={S.formLabel}>Email</label><input value={form.email} onChange={e=>setForm(f=>({...f,email:e.target.value}))} type="email" style={S.formInput} placeholder="admin@surplenta.com.pa"/></div>
+          <div><label style={S.formLabel}>Contrasena</label><input value={form.password} onChange={e=>setForm(f=>({...f,password:e.target.value}))} type="password" style={S.formInput} onKeyDown={e=>e.key==='Enter'&&submit()}/></div>
+          <button onClick={submit} disabled={loading} style={{...S.primaryBtn,width:'100%',padding:'0.85rem',fontSize:'0.85rem',display:'flex',alignItems:'center',justifyContent:'center',gap:'0.5rem',opacity:loading?0.7:1}}>
+            {loading&&<Spinner light/>}{loading?'Verificando...':'Entrar al panel'}
+          </button>
+        </div>
+        <button onClick={()=>setPage('home')} style={{display:'block',width:'100%',textAlign:'center',marginTop:'1.25rem',fontSize:'0.78rem',color:'var(--mid)',background:'none',border:'none',cursor:'pointer'}}>Volver a Surplenta</button>
+      </div>
+    </div>
   );
 }
