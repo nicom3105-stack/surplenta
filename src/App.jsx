@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { supabase } from "./supabase.js";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
@@ -65,7 +65,7 @@ function Nav({user, setPage, page, onLogout, unreadCount}) {
         SURPL<span style={{color:"var(--rust)"}}>E</span>NTA
       </button>
       <div style={{display:"flex",gap:"1.5rem",alignItems:"center"}}>
-        {[["browse","Explorar"],...(user?[["publish","Publicar"],["messages","Chat"],["dashboard","Mi cuenta"]]:[])]
+        {[["browse","Explorar"],...(user?[["publish","Publicar"],["messages","Chat"],["orders","Órdenes"],["dashboard","Mi cuenta"]]:[])]
           .map(([p,l])=>(
           <button key={p} onClick={()=>setPage(p)} style={{...S.ghostBtn,border:"none",color:page===p?"var(--sand)":"var(--steel)",position:"relative",padding:"0 0.25rem"}}>
             {l}
@@ -299,7 +299,7 @@ function ListingPage({listing, user, setPage, setActiveChatListing, showToast}) 
     if(!user){showToast("Inicia sesión para comprar","error");setPage("login");return;}
     setBuying(true);
     try {
-      const res = await fetch("/api/checkout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({listing,quantity:qty,buyerEmail:user.email})});
+      const res = await fetch("/api/checkout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({listing,quantity:qty,buyerEmail:user.email,buyerId:user.id,buyerName:user.name||user.email})});
       const data = await res.json();
       if(data.url) window.location.href = data.url;
       else showToast("Error al procesar pago","error");
@@ -698,7 +698,7 @@ export default function App() {
   };
 
   const unread = messages.filter(m=>user&&m.to_id===user.id).length;
-  const needsAuth = ["publish","dashboard"].includes(page)&&!user;
+  const needsAuth = ["publish","dashboard","orders"].includes(page)&&!user;
   const p = needsAuth?"login":page;
 
   if(!loaded) return (
@@ -718,8 +718,149 @@ export default function App() {
       {p==="publish"&&<PublishPage user={user} setPage={setPage} onPublish={handlePublish} showToast={showToast}/>}
       {p==="dashboard"&&<DashboardPage user={user} listings={listings} setPage={setPage} setSelectedListing={setSelectedListing} onDelete={handleDelete} showToast={showToast}/>}
       {p==="messages"&&<MessagesPage user={user} messages={messages} setMessages={setMessages} listings={listings} activeChatListing={activeChatListing} setActiveChatListing={setActiveChatListing}/>}
+      {p==="orders"&&<OrdersPage user={user} showToast={showToast}/>}
       {(p==="login"||p==="register")&&<AuthPage mode={p} setPage={setPage} onAuth={setUser} showToast={showToast}/>}
       {toast&&<Toast msg={toast.msg} type={toast.type}/>}
     </>
+  );
+}
+
+// ─── ORDERS PAGE (ESCROW) ─────────────────────────────────────────────────────
+function OrdersPage({user, showToast}) {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState("buying");
+
+  useEffect(()=>{
+    if(!user) return;
+    (async()=>{
+      const {data} = await supabase.from("orders").select("*").or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`).order("created_at",{ascending:false});
+      setOrders(data||[]);
+      setLoading(false);
+    })();
+  },[user?.id]);
+
+  const updateOrder = async(id, updates) => {
+    const {data,error} = await supabase.from("orders").update(updates).eq("id",id).select().single();
+    if(!error&&data){
+      setOrders(prev=>prev.map(o=>o.id===id?data:o));
+      return true;
+    }
+    return false;
+  };
+
+  const confirmShipped = async(order) => {
+    const ok = await updateOrder(order.id, {seller_confirmed:true, status:"shipped", shipped_at: new Date().toISOString()});
+    if(ok) showToast("Envío confirmado. Esperando confirmación del comprador.");
+  };
+
+  const confirmReceived = async(order) => {
+    const updates = {buyer_confirmed:true, delivered_at: new Date().toISOString()};
+    if(order.seller_confirmed) { updates.status = "released"; updates.released_at = new Date().toISOString(); }
+    else { updates.status = "delivered"; }
+    const ok = await updateOrder(order.id, updates);
+    if(ok) showToast(order.seller_confirmed ? "¡Pago liberado al vendedor! Transacción completada." : "Recepción confirmada.");
+  };
+
+  const openDispute = async(order) => {
+    const reason = prompt("Describe el problema con tu orden:");
+    if(!reason) return;
+    const ok = await updateOrder(order.id, {status:"disputed", dispute_reason:reason});
+    if(ok) showToast("Disputa abierta. Surplenta revisará tu caso en 24-48 horas.","error");
+  };
+
+  const STATUS_LABELS = {
+    pending:{l:"Pendiente de pago",c:"#f59e0b",bg:"#fef3c7"},
+    paid:{l:"Pagado — en preparación",c:"#3b82f6",bg:"#dbeafe"},
+    shipped:{l:"Enviado",c:"#8b5cf6",bg:"#ede9fe"},
+    delivered:{l:"Entregado",c:"#10b981",bg:"#d1fae5"},
+    released:{l:"Completado ✓",c:"#059669",bg:"#d1fae5"},
+    disputed:{l:"En disputa ⚠️",c:"#ef4444",bg:"#fee2e2"},
+    refunded:{l:"Reembolsado",c:"#6b7280",bg:"#f3f4f6"},
+  };
+
+  const myOrders = orders.filter(o => tab==="buying" ? o.buyer_id===user?.id : o.seller_id===user?.id);
+  const buyingCount = orders.filter(o=>o.buyer_id===user?.id).length;
+  const sellingCount = orders.filter(o=>o.seller_id===user?.id).length;
+
+  return (
+    <div style={{marginTop:58,maxWidth:860,margin:"58px auto 0",padding:"2.5rem 2rem"}}>
+      <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"2.2rem",color:"var(--concrete)",marginBottom:"0.25rem"}}>MIS ÓRDENES</div>
+      <p style={{color:"var(--mid)",fontSize:"0.85rem",marginBottom:"2rem"}}>Sistema de pago protegido — el dinero se libera cuando ambas partes confirman.</p>
+
+      {/* TABS */}
+      <div style={{display:"flex",gap:"0.5rem",marginBottom:"2rem",borderBottom:"2px solid rgba(42,40,37,0.1)",paddingBottom:"0"}}>
+        {[["buying",`Comprando (${buyingCount})`],["selling",`Vendiendo (${sellingCount})`]].map(([v,l])=>(
+          <button key={v} onClick={()=>setTab(v)} style={{fontFamily:"'Space Mono',monospace",fontSize:"0.65rem",letterSpacing:"0.1em",textTransform:"uppercase",padding:"0.6rem 1.2rem",background:"none",border:"none",borderBottom:tab===v?"2px solid var(--rust)":"2px solid transparent",color:tab===v?"var(--rust)":"var(--mid)",cursor:"pointer",marginBottom:"-2px"}}>{l}</button>
+        ))}
+      </div>
+
+      {loading ? <div style={{display:"flex",justifyContent:"center",padding:"3rem"}}><Spinner/></div> :
+       myOrders.length===0 ? (
+        <div style={{textAlign:"center",padding:"4rem 2rem",color:"var(--mid)"}}>
+          <div style={{fontSize:"3rem",marginBottom:"1rem"}}>📦</div>
+          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.5rem",color:"var(--concrete)"}}>SIN ÓRDENES</div>
+          <div style={{fontSize:"0.85rem",marginTop:"0.5rem"}}>{tab==="buying"?"Aún no has comprado nada.":"Aún no tienes ventas."}</div>
+        </div>
+      ) : (
+        <div style={{display:"flex",flexDirection:"column",gap:"1.2rem"}}>
+          {myOrders.map(order=>{
+            const st = STATUS_LABELS[order.status]||STATUS_LABELS.pending;
+            const isBuyer = order.buyer_id===user?.id;
+            const canDispute = isBuyer && ["paid","shipped","delivered"].includes(order.status);
+            const canConfirmShipped = !isBuyer && order.status==="paid" && !order.seller_confirmed;
+            const canConfirmReceived = isBuyer && ["shipped","delivered"].includes(order.status) && !order.buyer_confirmed;
+
+            return (
+              <div key={order.id} style={{background:"#fff",border:"1px solid rgba(42,40,37,0.1)",borderRadius:4,padding:"1.5rem",boxShadow:"0 2px 8px rgba(0,0,0,0.04)"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"1rem",flexWrap:"wrap",gap:"0.5rem"}}>
+                  <div>
+                    <div style={{fontWeight:600,fontSize:"0.95rem",color:"var(--concrete)",marginBottom:3}}>{order.listing_title}</div>
+                    <div style={{fontSize:"0.75rem",color:"var(--mid)"}}>
+                      {isBuyer ? `Vendedor: ${order.seller_name}` : `Comprador: ${order.buyer_name||order.buyer_email}`} · {new Date(order.created_at).toLocaleDateString("es-PA")}
+                    </div>
+                  </div>
+                  <span style={{background:st.bg,color:st.c,fontFamily:"'Space Mono',monospace",fontSize:"0.6rem",letterSpacing:"0.08em",padding:"0.3rem 0.7rem",borderRadius:2,whiteSpace:"nowrap"}}>{st.l}</span>
+                </div>
+
+                {/* AMOUNTS */}
+                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"0.75rem",marginBottom:"1rem"}}>
+                  {[["Total pagado",`$${Number(order.total_amount).toFixed(2)}`],["Comisión Surplenta",`$${Number(order.commission).toFixed(2)}`],["Pago al vendedor",`$${Number(order.seller_payout).toFixed(2)}`]].map(([k,v])=>(
+                    <div key={k} style={{background:"var(--sand)",padding:"0.6rem 0.8rem",borderRadius:2}}>
+                      <div style={{fontFamily:"'Space Mono',monospace",fontSize:"0.55rem",textTransform:"uppercase",color:"var(--mid)",marginBottom:3}}>{k}</div>
+                      <div style={{fontWeight:700,fontSize:"0.9rem",color:"var(--concrete)"}}>{v}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* ESCROW PROGRESS */}
+                <div style={{display:"flex",alignItems:"center",gap:"0.5rem",marginBottom:"1rem",flexWrap:"wrap"}}>
+                  {[["💳 Pago",true],["📦 Enviado",order.seller_confirmed||["shipped","delivered","released"].includes(order.status)],["✅ Recibido",order.buyer_confirmed||order.status==="released"],["💰 Liberado",order.status==="released"]].map(([l,done],i)=>(
+                    <React.Fragment key={l}>
+                      {i>0&&<div style={{width:20,height:1,background:done?"var(--rust)":"rgba(42,40,37,0.15)",flexShrink:0}}/>}
+                      <div style={{display:"flex",alignItems:"center",gap:"0.3rem",fontFamily:"'Space Mono',monospace",fontSize:"0.58rem",color:done?"var(--rust)":"var(--mid)"}}>
+                        <div style={{width:8,height:8,borderRadius:"50%",background:done?"var(--rust)":"rgba(42,40,37,0.2)",flexShrink:0}}/>
+                        {l}
+                      </div>
+                    </React.Fragment>
+                  ))}
+                </div>
+
+                {/* DISPUTE REASON */}
+                {order.dispute_reason&&<div style={{background:"#fee2e2",border:"1px solid #fca5a5",borderRadius:2,padding:"0.75rem",marginBottom:"1rem",fontSize:"0.8rem",color:"#991b1b"}}>⚠️ Disputa: {order.dispute_reason}</div>}
+                {order.admin_resolution&&<div style={{background:"#d1fae5",border:"1px solid #6ee7b7",borderRadius:2,padding:"0.75rem",marginBottom:"1rem",fontSize:"0.8rem",color:"#065f46"}}>✅ Resolución: {order.admin_resolution}</div>}
+
+                {/* ACTIONS */}
+                <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap"}}>
+                  {canConfirmShipped&&<button onClick={()=>confirmShipped(order)} style={{...S.primaryBtn,padding:"0.5rem 1rem",fontSize:"0.72rem"}}>📦 Confirmar envío</button>}
+                  {canConfirmReceived&&<button onClick={()=>confirmReceived(order)} style={{...S.primaryBtn,padding:"0.5rem 1rem",fontSize:"0.72rem",background:"#2c6e49"}}>✅ Confirmar recepción</button>}
+                  {canDispute&&<button onClick={()=>openDispute(order)} style={{...S.ghostBtn,padding:"0.5rem 1rem",fontSize:"0.72rem",color:"#ef4444",border:"1px solid #fca5a5"}}>⚠️ Abrir disputa</button>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
