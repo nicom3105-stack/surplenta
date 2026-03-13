@@ -5,19 +5,19 @@ import { supabase } from "./supabase.js";
 const CATEGORIES = ["Todos","Bloques","Acero","Madera","Techos","Plomería","Cemento","Pintura","Pisos","Eléctrico","Herramientas","Ferretería","Ventanas"];
 const CONDITIONS = { new:"Nuevo", used:"Usado", bulk:"Al mayor" };
 const CAT_IMAGES = {
-  Bloques:"https://images.unsplash.com/photo-1587582423116-ec07293f0395?w=400&q=80&fit=crop",
-  Acero:"https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=400&q=80&fit=crop",
-  Madera:"https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80&fit=crop&hue-rotate=0",
-  Techos:"https://images.unsplash.com/photo-1632759145351-1d592919f522?w=400&q=80&fit=crop",
-  "Plomería":"https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=400&q=80&fit=crop",
-  Cemento:"https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400&q=80&fit=crop",
-  Pintura:"https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=400&q=80&fit=crop",
-  Pisos:"https://images.unsplash.com/photo-1562113530-57ba467cea38?w=400&q=80&fit=crop",
-  "Eléctrico":"https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=400&q=80&fit=crop",
-  Herramientas:"https://images.unsplash.com/photo-1572981779307-38b8cabb2407?w=400&q=80&fit=crop",
-  "Ferretería":"https://images.unsplash.com/photo-1530124566582-a618bc2615dc?w=400&q=80&fit=crop",
-  Ventanas:"https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=400&q=80&fit=crop",
-  default:"https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400&q=80&fit=crop"
+  Bloques:"https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=400&q=80&fit=crop",
+  Acero:"https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=400&q=80&fit=crop",
+  Madera:"https://images.unsplash.com/photo-1541123437800-1bb1317badc2?w=400&q=80&fit=crop",
+  Techos:"https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80&fit=crop",
+  Plomería:"https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=400&q=80&fit=crop",
+  Cemento:"https://images.unsplash.com/photo-1517578430898-be07c4a6c2cd?w=400&q=80&fit=crop",
+  Pintura:"https://images.unsplash.com/photo-1562259949-e8e7689d7828?w=400&q=80&fit=crop",
+  Pisos:"https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&q=80&fit=crop",
+  Eléctrico:"https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80&fit=crop",
+  Herramientas:"https://images.unsplash.com/photo-1504148455328-c376907d081c?w=400&q=80&fit=crop",
+  Ferretería:"https://images.unsplash.com/photo-1530124566582-a618bc2615dc?w=400&q=80&fit=crop",
+  Ventanas:"https://images.unsplash.com/photo-1527030280862-64139fba04ca?w=400&q=80&fit=crop",
+  default:"https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=400&q=80&fit=crop"
 };
 const CAT_EMOJIS = CAT_IMAGES;
 
@@ -166,11 +166,11 @@ function HomePage({listings, setPage, setSelectedListing, setFilter}) {
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gridTemplateRows:"1fr 1fr 1fr",gap:3,zIndex:2}}>
           {[
-            {bg:"https://images.unsplash.com/photo-1587582423116-ec07293f0395?w=400&q=80&fit=crop",label:"Bloques"},
-            {bg:"https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=400&q=80&fit=crop",label:"Acero"},
-            {bg:"https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=400&q=80&fit=crop",label:"Plomeria"},
-            {bg:"https://images.unsplash.com/photo-1572981779307-38b8cabb2407?w=400&q=80&fit=crop",label:"Herramientas"},
-            {bg:"https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=400&q=80&fit=crop",label:"Pintura"},
+            {bg:"https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=300&q=80&fit=crop",label:"Bloques"},
+            {bg:"https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=300&q=80&fit=crop",label:"Acero"},
+            {bg:"https://images.unsplash.com/photo-1541123437800-1bb1317badc2?w=300&q=80&fit=crop",label:"Madera"},
+            {bg:"https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&q=80&fit=crop",label:"Techos"},
+            {bg:"https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=300&q=80&fit=crop",label:"Plomeria"},
           ].map((e,i)=>(
             <div key={i} style={{overflow:"hidden",gridRow:i===0||i===3?"span 2":"auto",position:"relative",minHeight:80}}>
               <img src={e.bg} alt={e.label} style={{width:"100%",height:"100%",objectFit:"cover",position:"absolute",inset:0}}/>
@@ -191,18 +191,16 @@ function HomePage({listings, setPage, setSelectedListing, setFilter}) {
           <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"2.5rem",color:"var(--concrete)"}}>CATEGORÍAS <span style={{color:"var(--rust)"}}>PRINCIPALES</span></h2>
           <button onClick={()=>{setFilter({q:"",category:"Todos"});setPage("browse");}} style={{...S.ghostBtn,border:"none",color:"var(--rust)"}}>Ver todas →</button>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"1px",background:"rgba(42,40,37,0.1)"}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:1,background:"rgba(42,40,37,0.12)",border:"1px solid rgba(42,40,37,0.12)"}}>
           {Object.entries(CAT_IMAGES).filter(([c])=>c!=="default").map(([cat,img])=>(
             <button key={cat} onClick={()=>{setFilter({q:"",category:cat});setPage("browse");}}
-              style={{background:"#fff",border:"none",cursor:"pointer",padding:0,overflow:"hidden",aspectRatio:"16/9",position:"relative",display:"block"}}
-              onMouseEnter={e=>{e.currentTarget.querySelector("img").style.transform="scale(1.05)";e.currentTarget.querySelector(".overlay").style.opacity="0.55";}}
-              onMouseLeave={e=>{e.currentTarget.querySelector("img").style.transform="scale(1)";e.currentTarget.querySelector(".overlay").style.opacity="0.45";}}>
-              <img src={img} alt={cat} style={{width:"100%",height:"100%",objectFit:"cover",transition:"transform .4s ease"}}/>
-              <div className="overlay" style={{position:"absolute",inset:0,background:"linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.1) 60%)",opacity:0.45,transition:"opacity .3s"}}/>
-              <div style={{position:"absolute",bottom:"1rem",left:"1rem",textAlign:"left"}}>
-                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.1rem",color:"#fff",letterSpacing:"0.05em"}}>{cat}</div>
-                <div style={{fontFamily:"'Space Mono',monospace",fontSize:"0.55rem",color:"rgba(255,255,255,0.7)",marginTop:2}}>{listings.filter(l=>l.category===cat).length} anuncios</div>
+              style={{background:"#fff",padding:"1.5rem 1rem",border:"none",textAlign:"left",display:"flex",flexDirection:"column",gap:"0.5rem",cursor:"pointer",transition:"background .15s"}}
+              onMouseEnter={e=>e.currentTarget.style.background="#faf5ed"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
+              <div style={{width:40,height:40,borderRadius:3,overflow:"hidden",background:"#e8e0d0"}}>
+                <img src={img} alt={cat} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
               </div>
+              <div style={{fontWeight:600,fontSize:"0.78rem",color:"var(--concrete)"}}>{cat}</div>
+              <div style={{fontFamily:"'Space Mono',monospace",fontSize:"0.58rem",color:"var(--mid)"}}>{listings.filter(l=>l.category===cat).length} anuncios</div>
             </button>
           ))}
         </div>
