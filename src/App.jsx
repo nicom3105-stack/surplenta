@@ -195,7 +195,9 @@ function HomePage({listings, setPage, setSelectedListing, setFilter}) {
             <button key={cat} onClick={()=>{setFilter({q:"",category:cat});setPage("browse");}}
               style={{background:"#fff",padding:"1.5rem 1rem",border:"none",textAlign:"left",display:"flex",flexDirection:"column",gap:"0.5rem",cursor:"pointer",transition:"background .15s"}}
               onMouseEnter={e=>e.currentTarget.style.background="#faf5ed"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
-              <div style={{fontSize:"1.8rem"}}>{em}</div>
+              <div style={{width:40,height:40,borderRadius:3,overflow:"hidden",background:"#e8e0d0"}}>
+                <img src={img} alt={cat} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+              </div>
               <div style={{fontWeight:600,fontSize:"0.78rem",color:"var(--concrete)"}}>{cat}</div>
               <div style={{fontFamily:"'Space Mono',monospace",fontSize:"0.58rem",color:"var(--mid)"}}>{listings.filter(l=>l.category===cat).length} anuncios</div>
             </button>
