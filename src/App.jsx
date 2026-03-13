@@ -166,14 +166,15 @@ function HomePage({listings, setPage, setSelectedListing, setFilter}) {
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gridTemplateRows:"1fr 1fr 1fr",gap:3,zIndex:2}}>
           {[
-            {bg:"https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=120&q=80&fit=crop",label:"Bloques"},
-            {bg:"https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=120&q=80&fit=crop",label:"Acero"},
-            {bg:"https://images.unsplash.com/photo-1541123437800-1bb1317badc2?w=120&q=80&fit=crop",label:"Madera"},
-            {bg:"https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=120&q=80&fit=crop",label:"Techos"},
-            {bg:"https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=120&q=80&fit=crop",label:"Plomeria"},
+            {bg:"https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=300&q=80&fit=crop",label:"Bloques"},
+            {bg:"https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=300&q=80&fit=crop",label:"Acero"},
+            {bg:"https://images.unsplash.com/photo-1541123437800-1bb1317badc2?w=300&q=80&fit=crop",label:"Madera"},
+            {bg:"https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&q=80&fit=crop",label:"Techos"},
+            {bg:"https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=300&q=80&fit=crop",label:"Plomeria"},
           ].map((e,i)=>(
-            <div key={i} style={{background:"linear-gradient(160deg,rgba(50,45,38,0.9),rgba(26,25,23,0.95))",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"2.5rem",gridRow:i===0||i===3?"span 2":"auto"}}>
-              <span style={{opacity:0.35}}>{e}</span>
+            <div key={i} style={{overflow:"hidden",gridRow:i===0||i===3?"span 2":"auto",position:"relative",minHeight:80}}>
+              <img src={e.bg} alt={e.label} style={{width:"100%",height:"100%",objectFit:"cover",position:"absolute",inset:0}}/>
+              <div style={{position:"absolute",bottom:4,left:6,fontFamily:"'Space Mono',monospace",fontSize:"0.5rem",color:"rgba(255,255,255,0.7)",letterSpacing:"0.1em",textTransform:"uppercase"}}>{e.label}</div>
             </div>
           ))}
         </div>
