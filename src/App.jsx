@@ -633,6 +633,52 @@ function AuthPage({mode, setPage, onAuth, showToast}) {
   );
 }
 
+
+// ─── FOOTER ───────────────────────────────────────────────────────────────────
+function Footer() {
+  return (
+    <footer style={{background:"var(--ash)",borderTop:"1px solid var(--line)",padding:"2.5rem 3rem 2rem",marginTop:"auto"}}>
+      <div style={{maxWidth:1200,margin:"0 auto"}}>
+        <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr",gap:"2rem",marginBottom:"2rem"}}>
+          <div>
+            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.8rem",color:"var(--sand)",letterSpacing:"0.1em",marginBottom:"0.75rem"}}>
+              SURPL<span style={{color:"var(--rust)"}}>E</span>NTA
+            </div>
+            <p style={{fontSize:"0.8rem",color:"var(--mid)",lineHeight:1.8,maxWidth:"28ch"}}>El marketplace de materiales de construcción de Panamá. Compra y vende con pago protegido.</p>
+          </div>
+          <div>
+            <div style={{fontFamily:"'Space Mono',monospace",fontSize:"0.6rem",letterSpacing:"0.15em",textTransform:"uppercase",color:"var(--steel)",marginBottom:"1rem"}}>Marketplace</div>
+            {["Explorar materiales","Publicar anuncio","Cómo funciona","Categorías"].map(l=>(
+              <div key={l} style={{fontSize:"0.78rem",color:"var(--mid)",marginBottom:"0.5rem",cursor:"pointer"}}>{l}</div>
+            ))}
+          </div>
+          <div>
+            <div style={{fontFamily:"'Space Mono',monospace",fontSize:"0.6rem",letterSpacing:"0.15em",textTransform:"uppercase",color:"var(--steel)",marginBottom:"1rem"}}>Soporte</div>
+            {["Centro de ayuda","Cómo pagar","Política de devoluciones","Reportar un problema"].map(l=>(
+              <div key={l} style={{fontSize:"0.78rem",color:"var(--mid)",marginBottom:"0.5rem",cursor:"pointer"}}>{l}</div>
+            ))}
+          </div>
+          <div>
+            <div style={{fontFamily:"'Space Mono',monospace",fontSize:"0.6rem",letterSpacing:"0.15em",textTransform:"uppercase",color:"var(--steel)",marginBottom:"1rem"}}>Legal</div>
+            {["Términos de uso","Política de privacidad","Política de cookies","Aviso legal"].map(l=>(
+              <div key={l} style={{fontSize:"0.78rem",color:"var(--mid)",marginBottom:"0.5rem",cursor:"pointer"}}>{l}</div>
+            ))}
+          </div>
+        </div>
+        <div style={{borderTop:"1px solid var(--line)",paddingTop:"1.5rem",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"1rem"}}>
+          <div style={{fontFamily:"'Space Mono',monospace",fontSize:"0.62rem",color:"var(--mid)"}}>
+            © 2026 Surplenta. Todos los derechos reservados. · <span style={{color:"var(--steel)"}}>surplenta.com.pa</span>
+          </div>
+          <div style={{display:"flex",gap:"1.5rem",alignItems:"center"}}>
+            <div style={{fontFamily:"'Space Mono',monospace",fontSize:"0.58rem",color:"var(--mid)",display:"flex",alignItems:"center",gap:"0.4rem"}}>🔒 Pagos protegidos por Stripe</div>
+            <div style={{fontFamily:"'Space Mono',monospace",fontSize:"0.58rem",color:"var(--mid)",display:"flex",alignItems:"center",gap:"0.4rem"}}>🇵🇦 Hecho en Panamá</div>
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [page, setPage] = useState("home");
@@ -718,6 +764,7 @@ export default function App() {
       {p==="checkout"&&<CheckoutPage listing={checkoutData?.listing} quantity={checkoutData?.quantity} user={user} setPage={setPage} showToast={showToast}/>}
       {(p==="login"||p==="register")&&<AuthPage mode={p} setPage={setPage} onAuth={setUser} showToast={showToast}/>}
       {toast&&<Toast msg={toast.msg} type={toast.type}/>}
+      <Footer/>
     </>
   );
 }
@@ -894,7 +941,7 @@ function CheckoutPage({listing, quantity, user, setPage, showToast}) {
             document.head.appendChild(s);
           });
         }
-        const pk = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || import.meta.env.STRIPE_PUBLISHABLE_KEY;
+        const pk = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
         stripeRef.current = window.Stripe(pk);
 
         const res = await fetch('/api/create-payment-intent', {
