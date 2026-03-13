@@ -4,7 +4,22 @@ import { supabase } from "./supabase.js";
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const CATEGORIES = ["Todos","Bloques","Acero","Madera","Techos","Plomería","Cemento","Pintura","Pisos","Eléctrico","Herramientas","Ferretería","Ventanas"];
 const CONDITIONS = { new:"Nuevo", used:"Usado", bulk:"Al mayor" };
-const CAT_EMOJIS = {Bloques:"🧱",Acero:"🏗️",Madera:"🪵",Techos:"🏠",Plomería:"💧",Cemento:"🪨",Pintura:"🎨",Pisos:"🧊",Eléctrico:"⚡",Herramientas:"🔧",Ferretería:"🔩",Ventanas:"🪟"};
+const CAT_IMAGES = {
+  Bloques:"https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=400&q=80&fit=crop",
+  Acero:"https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=400&q=80&fit=crop",
+  Madera:"https://images.unsplash.com/photo-1541123437800-1bb1317badc2?w=400&q=80&fit=crop",
+  Techos:"https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80&fit=crop",
+  Plomería:"https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=400&q=80&fit=crop",
+  Cemento:"https://images.unsplash.com/photo-1517578430898-be07c4a6c2cd?w=400&q=80&fit=crop",
+  Pintura:"https://images.unsplash.com/photo-1562259949-e8e7689d7828?w=400&q=80&fit=crop",
+  Pisos:"https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&q=80&fit=crop",
+  Eléctrico:"https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80&fit=crop",
+  Herramientas:"https://images.unsplash.com/photo-1504148455328-c376907d081c?w=400&q=80&fit=crop",
+  Ferretería:"https://images.unsplash.com/photo-1530124566582-a618bc2615dc?w=400&q=80&fit=crop",
+  Ventanas:"https://images.unsplash.com/photo-1527030280862-64139fba04ca?w=400&q=80&fit=crop",
+  default:"https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=400&q=80&fit=crop"
+};
+const CAT_EMOJIS = CAT_IMAGES;
 
 // ─── GLOBAL STYLES ────────────────────────────────────────────────────────────
 const STYLES = `
@@ -48,7 +63,7 @@ const Badge = ({type}) => {
 
 const StarRating = ({val=5}) => (
   <span style={{color:"var(--rust)",fontSize:"0.8rem"}}>
-    {"★".repeat(Math.round(val))}{"☆".repeat(5-Math.round(val))}
+    {"&#9733;".repeat(Math.round(val))}{"&#9734;".repeat(5-Math.round(val))}
     <span style={{color:"var(--mid)",fontSize:"0.72rem",marginLeft:4}}>{Number(val).toFixed(1)}</span>
   </span>
 );
@@ -96,8 +111,8 @@ function ListingCard({listing, onClick}) {
   return (
     <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} onClick={()=>onClick(listing)}
       style={{background:"#fff",border:"1px solid rgba(42,40,37,0.1)",borderRadius:2,overflow:"hidden",cursor:"pointer",transition:"transform .2s,box-shadow .2s",transform:hov?"translateY(-3px)":"none",boxShadow:hov?"0 12px 32px rgba(42,40,37,0.12)":"none"}}>
-      <div style={{height:140,background:"linear-gradient(140deg,#e8e0d0,#d4c8b4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"2.8rem",position:"relative"}}>
-        {CAT_EMOJIS[listing.category]||"📦"}
+      <div style={{height:140,background:"#1a1917",display:"flex",alignItems:"center",justifyContent:"center",position:"relative",overflow:"hidden"}}>
+        <img src={CAT_IMAGES[listing.category]||CAT_IMAGES.default} alt={listing.category} style={{width:"100%",height:"100%",objectFit:"cover",opacity:0.85}}/>
         <div style={{position:"absolute",top:8,left:8}}><Badge type={listing.condition}/></div>
       </div>
       <div style={{padding:"0.9rem 1rem 1rem"}}>
@@ -109,7 +124,7 @@ function ListingCard({listing, onClick}) {
             <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.4rem",color:"var(--concrete)"}}>${Number(listing.price).toFixed(2)}</span>
             <span style={{fontSize:"0.65rem",color:"var(--mid)",marginLeft:4}}>/{listing.unit}</span>
           </div>
-          <span style={{fontSize:"0.65rem",color:"var(--mid)"}}>📍 {listing.location}</span>
+          <span style={{fontSize:"0.65rem",color:"var(--mid)"}}>{listing.location}</span>
         </div>
       </div>
     </div>
@@ -150,7 +165,13 @@ function HomePage({listings, setPage, setSelectedListing, setFilter}) {
           </div>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gridTemplateRows:"1fr 1fr 1fr",gap:3,zIndex:2}}>
-          {["🧱","🏗️","🪵","🏠","💧"].map((e,i)=>(
+          {[
+            {bg:"https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=120&q=80&fit=crop",label:"Bloques"},
+            {bg:"https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=120&q=80&fit=crop",label:"Acero"},
+            {bg:"https://images.unsplash.com/photo-1541123437800-1bb1317badc2?w=120&q=80&fit=crop",label:"Madera"},
+            {bg:"https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=120&q=80&fit=crop",label:"Techos"},
+            {bg:"https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=120&q=80&fit=crop",label:"Plomeria"},
+          ].map((e,i)=>(
             <div key={i} style={{background:"linear-gradient(160deg,rgba(50,45,38,0.9),rgba(26,25,23,0.95))",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"2.5rem",gridRow:i===0||i===3?"span 2":"auto"}}>
               <span style={{opacity:0.35}}>{e}</span>
             </div>
@@ -159,7 +180,7 @@ function HomePage({listings, setPage, setSelectedListing, setFilter}) {
       </div>
       {/* TRUST */}
       <div style={{background:"var(--rust)",padding:"0.8rem 3rem",display:"flex",alignItems:"center",justifyContent:"space-around",flexWrap:"wrap",gap:"0.75rem"}}>
-        {["✓  Vendedores verificados","📍  Entrega en Panamá","🔒  Pagos seguros","💬  Chat directo"].map(t=>(
+        {["Vendedores verificados","Entrega en Panamá","Pagos seguros","Chat directo"].map(t=>(
           <span key={t} style={{fontFamily:"'Space Mono',monospace",fontSize:"0.62rem",letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(255,255,255,0.9)"}}>{t}</span>
         ))}
       </div>
@@ -170,7 +191,7 @@ function HomePage({listings, setPage, setSelectedListing, setFilter}) {
           <button onClick={()=>{setFilter({q:"",category:"Todos"});setPage("browse");}} style={{...S.ghostBtn,border:"none",color:"var(--rust)"}}>Ver todas →</button>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:1,background:"rgba(42,40,37,0.12)",border:"1px solid rgba(42,40,37,0.12)"}}>
-          {Object.entries(CAT_EMOJIS).map(([cat,em])=>(
+          {Object.entries(CAT_IMAGES).filter(([c])=>c!=="default").map(([cat,img])=>(
             <button key={cat} onClick={()=>{setFilter({q:"",category:cat});setPage("browse");}}
               style={{background:"#fff",padding:"1.5rem 1rem",border:"none",textAlign:"left",display:"flex",flexDirection:"column",gap:"0.5rem",cursor:"pointer",transition:"background .15s"}}
               onMouseEnter={e=>e.currentTarget.style.background="#faf5ed"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
@@ -195,7 +216,7 @@ function HomePage({listings, setPage, setSelectedListing, setFilter}) {
       <div style={{background:"var(--concrete)",padding:"3.5rem 3rem"}}>
         <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"2.5rem",color:"var(--sand)",marginBottom:"2rem"}}>CÓMO <span style={{color:"var(--rust)"}}>FUNCIONA</span></h2>
         <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)"}}>
-          {[["🔍","Busca","Explora miles de anuncios. Filtra por categoría, ubicación o precio."],["💬","Contacta","Chatea directo con el vendedor para negociar y coordinar."],["💳","Paga seguro","Tu dinero en escrow hasta confirmar la entrega."],["🚚","Recibe en obra","Entrega a domicilio o retiro en punto. Califica al vendedor."]].map(([ic,ti,de],i)=>(
+          {[["01","Busca","Explora miles de anuncios. Filtra por categoría, ubicación o precio."],["02","Contacta","Chatea directo con el vendedor para negociar y coordinar."],["03","Paga seguro","Tu dinero en escrow hasta confirmar la entrega."],["04","Recibe en obra","Entrega a domicilio o retiro en punto. Califica al vendedor."]].map(([ic,ti,de],i)=>(
             <div key={i} style={{padding:"2rem 1.5rem",borderRight:i<3?"1px solid var(--line)":"none",position:"relative"}}>
               <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"4rem",lineHeight:1,color:"rgba(200,184,154,0.1)",position:"absolute",top:"0.8rem",right:"1rem"}}>0{i+1}</div>
               <div style={{fontSize:"1.8rem",marginBottom:"1rem"}}>{ic}</div>
@@ -276,7 +297,7 @@ function BrowsePage({listings, setPage, setSelectedListing, filter}) {
         </div>
         {filtered.length===0?(
           <div style={{textAlign:"center",padding:"4rem",color:"var(--mid)"}}>
-            <div style={{fontSize:"3rem",marginBottom:"1rem"}}>🔍</div>
+            <div style={{fontSize:"3rem",marginBottom:"1rem"}}></div>
             <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.5rem",color:"var(--concrete)"}}>SIN RESULTADOS</div>
             <div style={{fontSize:"0.85rem",marginTop:"0.5rem"}}>Intenta con otros filtros</div>
           </div>
@@ -310,15 +331,15 @@ function ListingPage({listing, user, setPage, setActiveChatListing, showToast, s
       <button onClick={()=>setPage("browse")} style={{...S.ghostBtn,marginBottom:"1.5rem"}}>← Volver</button>
       <div style={{display:"grid",gridTemplateColumns:"1fr 320px",gap:"2rem",alignItems:"start"}}>
         <div>
-          <div style={{background:"linear-gradient(140deg,#e8e0d0,#d0c4b0)",borderRadius:4,height:280,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"5rem",position:"relative",marginBottom:"1.5rem"}}>
-            {CAT_EMOJIS[listing.category]||"📦"}
+          <div style={{borderRadius:4,height:280,display:"flex",alignItems:"center",justifyContent:"center",position:"relative",marginBottom:"1.5rem",overflow:"hidden",background:"#1a1917"}}>
+            <img src={CAT_IMAGES[listing.category]||CAT_IMAGES.default} alt={listing.category} style={{width:"100%",height:"100%",objectFit:"cover",opacity:0.9}}/>
             <div style={{position:"absolute",top:12,left:12}}><Badge type={listing.condition}/></div>
           </div>
           <div style={{fontFamily:"'Space Mono',monospace",fontSize:"0.62rem",letterSpacing:"0.15em",textTransform:"uppercase",color:"var(--rust)",marginBottom:8}}>{listing.category}</div>
           <h1 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"2.2rem",letterSpacing:"0.03em",color:"var(--concrete)",lineHeight:1.1,marginBottom:"1rem"}}>{listing.title}</h1>
           <p style={{fontSize:"0.9rem",lineHeight:1.8,color:"var(--mid)",marginBottom:"1.5rem"}}>{listing.description}</p>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.75rem"}}>
-            {[["📍 Ubicación",listing.location],["📦 Cantidad mín.",`${listing.min_qty||1} ${listing.unit}`],["🏷️ Condición",CONDITIONS[listing.condition]||listing.condition],["📅 Publicado",new Date(listing.created_at).toLocaleDateString("es-PA")]].map(([k,v])=>(
+            {[["Ubicación",listing.location],["Cantidad mín.",`${listing.min_qty||1} ${listing.unit}`],["Condición",CONDITIONS[listing.condition]||listing.condition],["Publicado",new Date(listing.created_at).toLocaleDateString("es-PA")]].map(([k,v])=>(
               <div key={k} style={{background:"var(--sand)",padding:"0.75rem 1rem",borderRadius:2}}>
                 <div style={{fontFamily:"'Space Mono',monospace",fontSize:"0.56rem",letterSpacing:"0.1em",textTransform:"uppercase",color:"var(--mid)",marginBottom:4}}>{k}</div>
                 <div style={{fontWeight:600,fontSize:"0.85rem",color:"var(--concrete)"}}>{v}</div>
@@ -349,15 +370,15 @@ function ListingPage({listing, user, setPage, setActiveChatListing, showToast, s
               <div style={{fontSize:"0.65rem",color:"var(--mid)",marginTop:4}}>Comisión 5% descontada al vendedor</div>
             </div>
             <button onClick={buyNow} style={{...S.primaryBtn,width:"100%",padding:"0.9rem",fontSize:"0.85rem",borderRadius:2,marginBottom:"0.5rem",display:"flex",alignItems:"center",justifyContent:"center",gap:"0.5rem",background:"#2c6e49"}}>
-              💳 Comprar ahora
+               Comprar ahora
             </button>
-            <button onClick={contact} style={{...S.ghostBtn,width:"100%",padding:"0.75rem",fontSize:"0.78rem",borderRadius:2,textAlign:"center",color:"var(--concrete)",border:"1px solid rgba(42,40,37,0.2)"}}>💬 Contactar vendedor</button>
+            <button onClick={contact} style={{...S.ghostBtn,width:"100%",padding:"0.75rem",fontSize:"0.78rem",borderRadius:2,textAlign:"center",color:"var(--concrete)",border:"1px solid rgba(42,40,37,0.2)"}}>Contactar vendedor</button>
           </div>
           <div style={{background:"#fff",border:"1px solid rgba(42,40,37,0.12)",borderRadius:4,padding:"1.2rem"}}>
             <div style={{fontFamily:"'Space Mono',monospace",fontSize:"0.58rem",letterSpacing:"0.15em",textTransform:"uppercase",color:"var(--mid)",marginBottom:"0.75rem"}}>Vendedor</div>
             <div style={{fontWeight:600,fontSize:"0.95rem",color:"var(--concrete)",marginBottom:4}}>{listing.seller_name||"Vendedor"}</div>
             <StarRating val={listing.seller_rating||5}/>
-            <div style={{marginTop:"0.75rem",fontFamily:"'Space Mono',monospace",fontSize:"0.6rem",color:"var(--mid)"}}>🔒 Pago protegido por Stripe</div>
+            <div style={{marginTop:"0.75rem",fontFamily:"'Space Mono',monospace",fontSize:"0.6rem",color:"var(--mid)"}}>Pago protegido por Stripe</div>
           </div>
         </div>
       </div>
@@ -452,7 +473,7 @@ function DashboardPage({user, listings, setPage, setSelectedListing, onDelete, s
             <div style={{marginTop:"0.75rem"}}><StarRating val={5}/></div>
           </div>
           <div style={{background:"#fff",border:"1px solid rgba(42,40,37,0.1)",borderRadius:4,padding:"1.2rem",marginBottom:"1rem"}}>
-            {[["📦 Anuncios",mine.length],["📅 Miembro desde",new Date(user.created_at||Date.now()).toLocaleDateString("es-PA")]].map(([k,v])=>(
+            {[["Anuncios",mine.length],["Miembro desde",new Date(user.created_at||Date.now()).toLocaleDateString("es-PA")]].map(([k,v])=>(
               <div key={k} style={{display:"flex",justifyContent:"space-between",padding:"0.5rem 0",borderBottom:"1px solid rgba(42,40,37,0.06)"}}>
                 <span style={{fontSize:"0.78rem",color:"var(--mid)"}}>{k}</span>
                 <span style={{fontWeight:600,fontSize:"0.85rem",color:"var(--concrete)"}}>{v}</span>
@@ -465,7 +486,7 @@ function DashboardPage({user, listings, setPage, setSelectedListing, onDelete, s
           <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"2rem",color:"var(--concrete)",marginBottom:"1.25rem"}}>MIS <span style={{color:"var(--rust)"}}>ANUNCIOS</span></h2>
           {mine.length===0?(
             <div style={{textAlign:"center",padding:"3rem",background:"#fff",border:"1px solid rgba(42,40,37,0.1)",borderRadius:4}}>
-              <div style={{fontSize:"2.5rem",marginBottom:"0.75rem"}}>📦</div>
+              <div style={{width:48,height:48,borderRadius:4,overflow:"hidden",margin:"0 auto 0.75rem",background:"#e8e0d0"}}><img src={CAT_IMAGES.default} alt="" style={{width:"100%",height:"100%",objectFit:"cover",opacity:0.5}}/></div>
               <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.3rem",color:"var(--concrete)"}}>NINGÚN ANUNCIO AÚN</div>
               <p style={{color:"var(--mid)",fontSize:"0.82rem",marginTop:"0.5rem"}}>Publica tu primer material.</p>
             </div>
@@ -473,7 +494,9 @@ function DashboardPage({user, listings, setPage, setSelectedListing, onDelete, s
             <div style={{display:"flex",flexDirection:"column",gap:"0.75rem"}}>
               {mine.map(l=>(
                 <div key={l.id} style={{background:"#fff",border:"1px solid rgba(42,40,37,0.1)",borderRadius:4,padding:"1rem 1.2rem",display:"flex",alignItems:"center",gap:"1rem"}}>
-                  <div style={{fontSize:"1.8rem",width:44,height:44,background:"var(--sand)",borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{CAT_EMOJIS[l.category]||"📦"}</div>
+                  <div style={{width:44,height:44,borderRadius:4,overflow:"hidden",flexShrink:0,background:"#1a1917"}}>
+                    <img src={CAT_IMAGES[l.category]||CAT_IMAGES.default} alt={l.category} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                  </div>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontWeight:600,fontSize:"0.85rem",color:"var(--concrete)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{l.title}</div>
                     <div style={{fontFamily:"'Space Mono',monospace",fontSize:"0.58rem",color:"var(--mid)",marginTop:3}}>{l.category} · ${l.price}/{l.unit} · {l.location}</div>
@@ -545,7 +568,7 @@ function MessagesPage({user, messages, setMessages, listings, activeChatListing,
       <main style={{display:"flex",flexDirection:"column",background:"var(--pale)"}}>
         {!activeId?(
           <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:"1rem",color:"var(--mid)"}}>
-            <div style={{fontSize:"3rem"}}>💬</div>
+            <div style={{width:48,height:48,borderRadius:"50%",background:"var(--line)",margin:"0 auto"}}></div>
             <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.4rem",color:"var(--concrete)"}}>SELECCIONA UNA CONVERSACIÓN</div>
           </div>
         ):(
@@ -837,7 +860,7 @@ function OrdersPage({user, showToast}) {
     shipped:{l:"Enviado",c:"#8b5cf6",bg:"#ede9fe"},
     delivered:{l:"Entregado",c:"#10b981",bg:"#d1fae5"},
     released:{l:"Completado ✓",c:"#059669",bg:"#d1fae5"},
-    disputed:{l:"En disputa ⚠️",c:"#ef4444",bg:"#fee2e2"},
+    disputed:{l:"En disputa",c:"#ef4444",bg:"#fee2e2"},
     refunded:{l:"Reembolsado",c:"#6b7280",bg:"#f3f4f6"},
   };
 
@@ -860,7 +883,7 @@ function OrdersPage({user, showToast}) {
       {loading ? <div style={{display:"flex",justifyContent:"center",padding:"3rem"}}><Spinner/></div> :
        myOrders.length===0 ? (
         <div style={{textAlign:"center",padding:"4rem 2rem",color:"var(--mid)"}}>
-          <div style={{fontSize:"3rem",marginBottom:"1rem"}}>📦</div>
+          <div style={{width:56,height:56,borderRadius:4,overflow:"hidden",margin:"0 auto 1rem",background:"#e8e0d0"}}><img src={CAT_IMAGES.default} alt="" style={{width:"100%",height:"100%",objectFit:"cover",opacity:0.4}}/></div>
           <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.5rem",color:"var(--concrete)"}}>SIN ÓRDENES</div>
           <div style={{fontSize:"0.85rem",marginTop:"0.5rem"}}>{tab==="buying"?"Aún no has comprado nada.":"Aún no tienes ventas."}</div>
         </div>
@@ -897,7 +920,7 @@ function OrdersPage({user, showToast}) {
 
                 {/* ESCROW PROGRESS */}
                 <div style={{display:"flex",alignItems:"center",gap:"0.5rem",marginBottom:"1rem",flexWrap:"wrap"}}>
-                  {[["💳 Pago",true],["📦 Enviado",order.seller_confirmed||["shipped","delivered","released"].includes(order.status)],["✅ Recibido",order.buyer_confirmed||order.status==="released"],["💰 Liberado",order.status==="released"]].map(([l,done],i)=>(
+                  {[["Pago",true],["Enviado",order.seller_confirmed||["shipped","delivered","released"].includes(order.status)],["Recibido",order.buyer_confirmed||order.status==="released"],["Liberado",order.status==="released"]].map(([l,done],i)=>(
                     <React.Fragment key={l}>
                       {i>0&&<div style={{width:20,height:1,background:done?"var(--rust)":"rgba(42,40,37,0.15)",flexShrink:0}}/>}
                       <div style={{display:"flex",alignItems:"center",gap:"0.3rem",fontFamily:"'Space Mono',monospace",fontSize:"0.58rem",color:done?"var(--rust)":"var(--mid)"}}>
@@ -909,14 +932,14 @@ function OrdersPage({user, showToast}) {
                 </div>
 
                 {/* DISPUTE REASON */}
-                {order.dispute_reason&&<div style={{background:"#fee2e2",border:"1px solid #fca5a5",borderRadius:2,padding:"0.75rem",marginBottom:"1rem",fontSize:"0.8rem",color:"#991b1b"}}>⚠️ Disputa: {order.dispute_reason}</div>}
-                {order.admin_resolution&&<div style={{background:"#d1fae5",border:"1px solid #6ee7b7",borderRadius:2,padding:"0.75rem",marginBottom:"1rem",fontSize:"0.8rem",color:"#065f46"}}>✅ Resolución: {order.admin_resolution}</div>}
+                {order.dispute_reason&&<div style={{background:"#fee2e2",border:"1px solid #fca5a5",borderRadius:2,padding:"0.75rem",marginBottom:"1rem",fontSize:"0.8rem",color:"#991b1b"}}>Disputa: {order.dispute_reason}</div>}
+                {order.admin_resolution&&<div style={{background:"#d1fae5",border:"1px solid #6ee7b7",borderRadius:2,padding:"0.75rem",marginBottom:"1rem",fontSize:"0.8rem",color:"#065f46"}}>Resolución: {order.admin_resolution}</div>}
 
                 {/* ACTIONS */}
                 <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap"}}>
-                  {canConfirmShipped&&<button onClick={()=>confirmShipped(order)} style={{...S.primaryBtn,padding:"0.5rem 1rem",fontSize:"0.72rem"}}>📦 Confirmar envío</button>}
-                  {canConfirmReceived&&<button onClick={()=>confirmReceived(order)} style={{...S.primaryBtn,padding:"0.5rem 1rem",fontSize:"0.72rem",background:"#2c6e49"}}>✅ Confirmar recepción</button>}
-                  {canDispute&&<button onClick={()=>openDispute(order)} style={{...S.ghostBtn,padding:"0.5rem 1rem",fontSize:"0.72rem",color:"#ef4444",border:"1px solid #fca5a5"}}>⚠️ Abrir disputa</button>}
+                  {canConfirmShipped&&<button onClick={()=>confirmShipped(order)} style={{...S.primaryBtn,padding:"0.5rem 1rem",fontSize:"0.72rem"}}>Confirmar envío</button>}
+                  {canConfirmReceived&&<button onClick={()=>confirmReceived(order)} style={{...S.primaryBtn,padding:"0.5rem 1rem",fontSize:"0.72rem",background:"#2c6e49"}}>Confirmar recepción</button>}
+                  {canDispute&&<button onClick={()=>openDispute(order)} style={{...S.ghostBtn,padding:"0.5rem 1rem",fontSize:"0.72rem",color:"#ef4444",border:"1px solid #fca5a5"}}>Abrir disputa</button>}
                 </div>
               </div>
             );
@@ -1049,7 +1072,7 @@ function CheckoutPage({listing, quantity, user, setPage, showToast}) {
   if (paid) return (
     <div style={{marginTop:58,minHeight:'calc(100vh - 58px)',display:'flex',alignItems:'center',justifyContent:'center',background:'var(--pale)'}}>
       <div style={{textAlign:'center',background:'#fff',padding:'3rem',borderRadius:8,maxWidth:440,boxShadow:'0 8px 32px rgba(0,0,0,0.08)'}}>
-        <div style={{fontSize:'4rem',marginBottom:'1rem'}}>✅</div>
+        <div style={{width:56,height:56,borderRadius:'50%',background:'#d1fae5',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 1rem',fontSize:'1.5rem',color:'#065f46',fontWeight:700}}>OK</div>
         <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'2rem',color:'var(--concrete)',marginBottom:'0.5rem'}}>¡PAGO EXITOSO!</div>
         <p style={{color:'var(--mid)',fontSize:'0.88rem',marginBottom:'2rem',lineHeight:1.7}}>Tu orden fue procesada. El dinero queda en escrow hasta que ambas partes confirmen la entrega.</p>
         <div style={{background:'var(--sand)',borderRadius:4,padding:'1rem',marginBottom:'1.5rem',fontSize:'0.82rem',textAlign:'left'}}>
@@ -1058,7 +1081,7 @@ function CheckoutPage({listing, quantity, user, setPage, showToast}) {
           <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}><span style={{color:'var(--mid)'}}>ITBMS (7%)</span><span style={{fontWeight:500}}>${tax}</span></div>
           <div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:'var(--mid)'}}>Total pagado</span><span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'1.1rem'}}>${total} USD</span></div>
         </div>
-        <button onClick={()=>setPage('orders')} style={{...S.primaryBtn,width:'100%',padding:'0.9rem',fontSize:'0.85rem',marginBottom:'0.5rem'}}>📦 Ver mis órdenes</button>
+        <button onClick={()=>setPage('orders')} style={{...S.primaryBtn,width:'100%',padding:'0.9rem',fontSize:'0.85rem',marginBottom:'0.5rem'}}>Ver mis órdenes</button>
         <button onClick={()=>setPage('browse')} style={{...S.ghostBtn,width:'100%',padding:'0.7rem',fontSize:'0.78rem',color:'var(--concrete)',border:'1px solid rgba(42,40,37,0.2)'}}>Seguir comprando</button>
       </div>
     </div>
@@ -1069,13 +1092,15 @@ function CheckoutPage({listing, quantity, user, setPage, showToast}) {
       <div style={{width:'100%',maxWidth:520}}>
         <button onClick={()=>setPage('listing')} style={{...S.ghostBtn,marginBottom:'1.5rem'}}>← Volver</button>
         <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'2rem',color:'var(--concrete)',marginBottom:'0.25rem'}}>CHECKOUT</div>
-        <p style={{color:'var(--mid)',fontSize:'0.82rem',marginBottom:'2rem'}}>🔒 Pago seguro protegido por Stripe</p>
+        <p style={{color:'var(--mid)',fontSize:'0.82rem',marginBottom:'2rem'}}>Pago seguro protegido por Stripe</p>
 
         {/* ORDER SUMMARY */}
         <div style={{background:'#fff',border:'1px solid rgba(42,40,37,0.1)',borderRadius:4,padding:'1.5rem',marginBottom:'1.5rem'}}>
           <div style={{fontFamily:"'Space Mono',monospace",fontSize:'0.6rem',letterSpacing:'0.15em',textTransform:'uppercase',color:'var(--mid)',marginBottom:'1rem'}}>Resumen de orden</div>
           <div style={{display:'flex',gap:'1rem',alignItems:'center',marginBottom:'1rem',paddingBottom:'1rem',borderBottom:'1px solid rgba(42,40,37,0.08)'}}>
-            <div style={{width:56,height:56,background:'linear-gradient(140deg,#e8e0d0,#d4c8b4)',borderRadius:4,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1.8rem',flexShrink:0}}>{CAT_EMOJIS[listing.category]||'📦'}</div>
+            <div style={{width:56,height:56,borderRadius:4,flexShrink:0,overflow:'hidden',background:'#1a1917'}}>
+              <img src={CAT_IMAGES[listing.category]||CAT_IMAGES.default} alt={listing.category} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+            </div>
             <div>
               <div style={{fontWeight:600,fontSize:'0.9rem',color:'var(--concrete)'}}>{listing.title}</div>
               <div style={{fontSize:'0.75rem',color:'var(--mid)',marginTop:2}}>{listing.seller_name} · {listing.location}</div>
@@ -1106,10 +1131,10 @@ function CheckoutPage({listing, quantity, user, setPage, showToast}) {
               <div ref={mountedRef} style={{border:'1px solid rgba(42,40,37,0.18)',borderRadius:2,padding:'0.75rem 0.8rem',background:'var(--pale)',marginBottom:'1rem',minHeight:42}}/>
               {cardError && <div style={{color:'#c0392b',fontSize:'0.78rem',marginBottom:'1rem',background:'#fef0ed',padding:'0.5rem 0.75rem',borderRadius:2}}>{cardError}</div>}
               <button onClick={handlePay} disabled={paying||!cardReady} style={{...S.primaryBtn,width:'100%',padding:'0.9rem',fontSize:'0.88rem',background:'#2c6e49',display:'flex',alignItems:'center',justifyContent:'center',gap:'0.5rem',opacity:(paying||!cardReady)?0.7:1}}>
-                {paying?<Spinner light/>:'🔒'} {paying?'Procesando…':`Pagar $${total} USD (incl. ITBMS)`}
+                {paying?<Spinner light/>:'SSL'} {paying?'Procesando…':`Pagar $${total} USD (incl. ITBMS)`}
               </button>
               <div style={{textAlign:'center',marginTop:'0.75rem',fontFamily:"'Space Mono',monospace",fontSize:'0.58rem',color:'var(--mid)',display:'flex',alignItems:'center',justifyContent:'center',gap:'0.5rem'}}>
-                🔒 Encriptado con SSL · Powered by Stripe
+                SSL Encriptado con SSL · Powered by Stripe
               </div>
             </>
           )}
