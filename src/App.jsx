@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "./supabase.js";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
@@ -291,20 +291,14 @@ function BrowsePage({listings, setPage, setSelectedListing, filter}) {
 }
 
 // ─── LISTING DETAIL ───────────────────────────────────────────────────────────
-function ListingPage({listing, user, setPage, setActiveChatListing, showToast}) {
+function ListingPage({listing, user, setPage, setActiveChatListing, showToast, setCheckoutData}) {
   if(!listing) return null;
   const [qty, setQty] = useState(listing.min_qty||1);
-  const [buying, setBuying] = useState(false);
-  const buyNow = async () => {
+  const buyNow = () => {
     if(!user){showToast("Inicia sesión para comprar","error");setPage("login");return;}
-    setBuying(true);
-    try {
-      const res = await fetch("/api/checkout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({listing,quantity:qty,buyerEmail:user.email,buyerId:user.id,buyerName:user.name||user.email})});
-      const data = await res.json();
-      if(data.url) window.location.href = data.url;
-      else showToast("Error al procesar pago","error");
-    } catch(e){showToast("Error de conexión","error");}
-    setBuying(false);
+    if(qty < (listing.min_qty||1)){showToast("Cantidad mínima: "+listing.min_qty+" "+listing.unit,"error");return;}
+    setCheckoutData({listing, quantity: qty});
+    setPage("checkout");
   };
   const contact = () => {
     if(!user){showToast("Inicia sesión para contactar al vendedor","error");setPage("login");return;}
@@ -353,8 +347,8 @@ function ListingPage({listing, user, setPage, setActiveChatListing, showToast}) 
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}><span style={{color:"var(--mid)"}}>Comisión (5%)</span><span style={{color:"var(--mid)"}}>${(listing.price*qty*0.05).toFixed(2)}</span></div>
               <div style={{display:"flex",justifyContent:"space-between",borderTop:"1px solid rgba(42,40,37,0.1)",paddingTop:6,marginTop:4}}><span style={{fontWeight:600}}>Total</span><span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.2rem"}}>${(listing.price*qty).toFixed(2)}</span></div>
             </div>
-            <button onClick={buyNow} disabled={buying} style={{...S.primaryBtn,width:"100%",padding:"0.9rem",fontSize:"0.85rem",borderRadius:2,marginBottom:"0.5rem",display:"flex",alignItems:"center",justifyContent:"center",gap:"0.5rem",background:"#2c6e49",opacity:buying?0.7:1}}>
-              {buying?<Spinner light/>:"💳"}{buying?" Procesando…":" Comprar ahora"}
+            <button onClick={buyNow} style={{...S.primaryBtn,width:"100%",padding:"0.9rem",fontSize:"0.85rem",borderRadius:2,marginBottom:"0.5rem",display:"flex",alignItems:"center",justifyContent:"center",gap:"0.5rem",background:"#2c6e49"}}>
+              💳 Comprar ahora
             </button>
             <button onClick={contact} style={{...S.ghostBtn,width:"100%",padding:"0.75rem",fontSize:"0.78rem",borderRadius:2,textAlign:"center",color:"var(--concrete)",border:"1px solid rgba(42,40,37,0.2)"}}>💬 Contactar vendedor</button>
           </div>
@@ -647,6 +641,7 @@ export default function App() {
   const [selectedListing, setSelectedListing] = useState(null);
   const [activeChatListing, setActiveChatListing] = useState(null);
   const [filter, setFilter] = useState({q:"",category:"Todos"});
+  const [checkoutData, setCheckoutData] = useState(null);
   const [loaded, setLoaded] = useState(false);
   const [toast, setToast] = useState(null);
 
@@ -714,11 +709,12 @@ export default function App() {
       <Nav user={user} setPage={setPage} page={p} onLogout={handleLogout} unreadCount={unread}/>
       {p==="home"&&<HomePage listings={listings} setPage={setPage} setSelectedListing={setSelectedListing} setFilter={setFilter}/>}
       {p==="browse"&&<BrowsePage listings={listings} setPage={setPage} setSelectedListing={setSelectedListing} filter={filter}/>}
-      {p==="listing"&&<ListingPage listing={selectedListing} user={user} setPage={setPage} setActiveChatListing={setActiveChatListing} showToast={showToast}/>}
+      {p==="listing"&&<ListingPage listing={selectedListing} user={user} setPage={setPage} setActiveChatListing={setActiveChatListing} showToast={showToast} setCheckoutData={setCheckoutData}/>}
       {p==="publish"&&<PublishPage user={user} setPage={setPage} onPublish={handlePublish} showToast={showToast}/>}
       {p==="dashboard"&&<DashboardPage user={user} listings={listings} setPage={setPage} setSelectedListing={setSelectedListing} onDelete={handleDelete} showToast={showToast}/>}
       {p==="messages"&&<MessagesPage user={user} messages={messages} setMessages={setMessages} listings={listings} activeChatListing={activeChatListing} setActiveChatListing={setActiveChatListing}/>}
       {p==="orders"&&<OrdersPage user={user} showToast={showToast}/>}
+      {p==="checkout"&&<CheckoutPage listing={checkoutData?.listing} quantity={checkoutData?.quantity} user={user} setPage={setPage} showToast={showToast}/>}
       {(p==="login"||p==="register")&&<AuthPage mode={p} setPage={setPage} onAuth={setUser} showToast={showToast}/>}
       {toast&&<Toast msg={toast.msg} type={toast.type}/>}
     </>
@@ -861,6 +857,193 @@ function OrdersPage({user, showToast}) {
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── CHECKOUT PAGE (STRIPE ELEMENTS) ─────────────────────────────────────────
+function CheckoutPage({listing, quantity, user, setPage, showToast}) {
+  const [clientSecret, setClientSecret] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [paying, setPaying] = useState(false);
+  const [paid, setPaid] = useState(false);
+  const [cardReady, setCardReady] = useState(false);
+  const [cardError, setCardError] = useState(null);
+  const stripeRef = useRef(null);
+  const cardRef = useRef(null);
+  const mountedRef = useRef(null);
+
+  const total = listing ? (listing.price * quantity).toFixed(2) : "0.00";
+  const commission = listing ? (listing.price * quantity * 0.05).toFixed(2) : "0.00";
+
+  useEffect(() => {
+    if (!listing) return;
+    (async () => {
+      try {
+        // Load Stripe.js dynamically
+        if (!window.Stripe) {
+          await new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = 'https://js.stripe.com/v3/';
+            s.onload = resolve;
+            s.onerror = reject;
+            document.head.appendChild(s);
+          });
+        }
+        const pk = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+        stripeRef.current = window.Stripe(pk);
+
+        const res = await fetch('/api/create-payment-intent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            listing, quantity,
+            buyerEmail: user?.email,
+            buyerId: user?.id,
+            buyerName: user?.name || user?.email,
+          }),
+        });
+        const data = await res.json();
+        if (data.clientSecret) {
+          setClientSecret(data.clientSecret);
+          setLoading(false);
+          // Mount card element
+          setTimeout(() => {
+            if (!mountedRef.current) return;
+            const elements = stripeRef.current.elements();
+            cardRef.current = elements.create('card', {
+              style: {
+                base: {
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontSize: '16px',
+                  color: '#2a2825',
+                  '::placeholder': { color: '#9a8f80' },
+                },
+              },
+              hidePostalCode: true,
+            });
+            cardRef.current.mount(mountedRef.current);
+            cardRef.current.on('ready', () => setCardReady(true));
+            cardRef.current.on('change', e => setCardError(e.error ? e.error.message : null));
+          }, 100);
+        } else {
+          showToast('Error al iniciar pago', 'error');
+          setLoading(false);
+        }
+      } catch (e) {
+        console.error(e);
+        showToast('Error de conexión', 'error');
+        setLoading(false);
+      }
+    })();
+    return () => { if (cardRef.current) cardRef.current.destroy(); };
+  }, [listing?.id]);
+
+  const handlePay = async () => {
+    if (!stripeRef.current || !cardRef.current || !clientSecret) return;
+    setPaying(true);
+    setCardError(null);
+    const { error, paymentIntent } = await stripeRef.current.confirmCardPayment(clientSecret, {
+      payment_method: {
+        card: cardRef.current,
+        billing_details: { email: user?.email, name: user?.name },
+      },
+    });
+    if (error) {
+      setCardError(error.message);
+      setPaying(false);
+    } else if (paymentIntent.status === 'succeeded') {
+      // Save order to Supabase
+      await supabase.from('orders').upsert({
+        stripe_session_id: paymentIntent.id,
+        listing_id: listing.id,
+        listing_title: listing.title,
+        buyer_id: user?.id,
+        buyer_email: user?.email,
+        buyer_name: user?.name || user?.email,
+        seller_id: listing.seller_id,
+        seller_name: listing.seller_name,
+        quantity,
+        unit_price: listing.price,
+        total_amount: parseFloat(total),
+        commission: parseFloat(commission),
+        seller_payout: parseFloat(total) - parseFloat(commission),
+        status: 'paid',
+      }, { onConflict: 'stripe_session_id' });
+      setPaid(true);
+      setPaying(false);
+    }
+  };
+
+  if (!listing) return null;
+
+  if (paid) return (
+    <div style={{marginTop:58,minHeight:'calc(100vh - 58px)',display:'flex',alignItems:'center',justifyContent:'center',background:'var(--pale)'}}>
+      <div style={{textAlign:'center',background:'#fff',padding:'3rem',borderRadius:8,maxWidth:440,boxShadow:'0 8px 32px rgba(0,0,0,0.08)'}}>
+        <div style={{fontSize:'4rem',marginBottom:'1rem'}}>✅</div>
+        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'2rem',color:'var(--concrete)',marginBottom:'0.5rem'}}>¡PAGO EXITOSO!</div>
+        <p style={{color:'var(--mid)',fontSize:'0.88rem',marginBottom:'2rem',lineHeight:1.7}}>Tu orden fue procesada. El dinero queda en escrow hasta que ambas partes confirmen la entrega.</p>
+        <div style={{background:'var(--sand)',borderRadius:4,padding:'1rem',marginBottom:'1.5rem',fontSize:'0.82rem',textAlign:'left'}}>
+          <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}><span style={{color:'var(--mid)'}}>Producto</span><span style={{fontWeight:600}}>{listing.title}</span></div>
+          <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}><span style={{color:'var(--mid)'}}>Cantidad</span><span style={{fontWeight:600}}>{quantity} {listing.unit}</span></div>
+          <div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:'var(--mid)'}}>Total pagado</span><span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'1.1rem'}}>${total}</span></div>
+        </div>
+        <button onClick={()=>setPage('orders')} style={{...S.primaryBtn,width:'100%',padding:'0.9rem',fontSize:'0.85rem',marginBottom:'0.5rem'}}>📦 Ver mis órdenes</button>
+        <button onClick={()=>setPage('browse')} style={{...S.ghostBtn,width:'100%',padding:'0.7rem',fontSize:'0.78rem',color:'var(--concrete)',border:'1px solid rgba(42,40,37,0.2)'}}>Seguir comprando</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{marginTop:58,minHeight:'calc(100vh - 58px)',background:'var(--pale)',display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'3rem 1rem'}}>
+      <div style={{width:'100%',maxWidth:520}}>
+        <button onClick={()=>setPage('listing')} style={{...S.ghostBtn,marginBottom:'1.5rem'}}>← Volver</button>
+        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'2rem',color:'var(--concrete)',marginBottom:'0.25rem'}}>CHECKOUT</div>
+        <p style={{color:'var(--mid)',fontSize:'0.82rem',marginBottom:'2rem'}}>🔒 Pago seguro protegido por Stripe</p>
+
+        {/* ORDER SUMMARY */}
+        <div style={{background:'#fff',border:'1px solid rgba(42,40,37,0.1)',borderRadius:4,padding:'1.5rem',marginBottom:'1.5rem'}}>
+          <div style={{fontFamily:"'Space Mono',monospace",fontSize:'0.6rem',letterSpacing:'0.15em',textTransform:'uppercase',color:'var(--mid)',marginBottom:'1rem'}}>Resumen de orden</div>
+          <div style={{display:'flex',gap:'1rem',alignItems:'center',marginBottom:'1rem',paddingBottom:'1rem',borderBottom:'1px solid rgba(42,40,37,0.08)'}}>
+            <div style={{width:56,height:56,background:'linear-gradient(140deg,#e8e0d0,#d4c8b4)',borderRadius:4,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1.8rem',flexShrink:0}}>{CAT_EMOJIS[listing.category]||'📦'}</div>
+            <div>
+              <div style={{fontWeight:600,fontSize:'0.9rem',color:'var(--concrete)'}}>{listing.title}</div>
+              <div style={{fontSize:'0.75rem',color:'var(--mid)',marginTop:2}}>{listing.seller_name} · {listing.location}</div>
+            </div>
+          </div>
+          {[['Precio unitario',`$${Number(listing.price).toFixed(2)} / ${listing.unit}`],['Cantidad',`${quantity} ${listing.unit}`],['Subtotal',`$${total}`],['Comisión Surplenta (5%)',`$${commission}`]].map(([k,v])=>(
+            <div key={k} style={{display:'flex',justifyContent:'space-between',fontSize:'0.82rem',marginBottom:6}}>
+              <span style={{color:'var(--mid)'}}>{k}</span><span style={{fontWeight:500}}>{v}</span>
+            </div>
+          ))}
+          <div style={{display:'flex',justifyContent:'space-between',borderTop:'1px solid rgba(42,40,37,0.1)',paddingTop:10,marginTop:8}}>
+            <span style={{fontWeight:700,fontSize:'0.9rem'}}>Total</span>
+            <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'1.4rem',color:'var(--concrete)'}}>${total} USD</span>
+          </div>
+        </div>
+
+        {/* CARD FORM */}
+        <div style={{background:'#fff',border:'1px solid rgba(42,40,37,0.1)',borderRadius:4,padding:'1.5rem'}}>
+          <div style={{fontFamily:"'Space Mono',monospace",fontSize:'0.6rem',letterSpacing:'0.15em',textTransform:'uppercase',color:'var(--mid)',marginBottom:'1rem'}}>Datos de pago</div>
+          {loading ? (
+            <div style={{display:'flex',alignItems:'center',justifyContent:'center',padding:'2rem',gap:'0.75rem',color:'var(--mid)',fontSize:'0.82rem'}}>
+              <Spinner/> Cargando formulario de pago…
+            </div>
+          ) : (
+            <>
+              <div style={{fontFamily:"'Space Mono',monospace",fontSize:'0.6rem',letterSpacing:'0.15em',textTransform:'uppercase',color:'var(--mid)',marginBottom:'0.5rem'}}>Número de tarjeta</div>
+              <div ref={mountedRef} style={{border:'1px solid rgba(42,40,37,0.18)',borderRadius:2,padding:'0.75rem 0.8rem',background:'var(--pale)',marginBottom:'1rem',minHeight:42}}/>
+              {cardError && <div style={{color:'#c0392b',fontSize:'0.78rem',marginBottom:'1rem',background:'#fef0ed',padding:'0.5rem 0.75rem',borderRadius:2}}>{cardError}</div>}
+              <button onClick={handlePay} disabled={paying||!cardReady} style={{...S.primaryBtn,width:'100%',padding:'0.9rem',fontSize:'0.88rem',background:'#2c6e49',display:'flex',alignItems:'center',justifyContent:'center',gap:'0.5rem',opacity:(paying||!cardReady)?0.7:1}}>
+                {paying?<Spinner light/>:'🔒'} {paying?'Procesando…':`Pagar $${total} USD`}
+              </button>
+              <div style={{textAlign:'center',marginTop:'0.75rem',fontFamily:"'Space Mono',monospace",fontSize:'0.58rem',color:'var(--mid)',display:'flex',alignItems:'center',justifyContent:'center',gap:'0.5rem'}}>
+                🔒 Encriptado con SSL · Powered by Stripe
+              </div>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
