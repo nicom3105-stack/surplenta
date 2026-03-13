@@ -706,13 +706,15 @@ export default function App() {
     setTimeout(()=>setToast(null),3000);
   },[]);
 
-  // Init: check session + load listings
+  // Init: check session + load listings + handle /admin route
   useEffect(()=>{
+    if(window.location.pathname === '/admin') setPage('adminlogin');
     (async()=>{
       const {data:{session}} = await supabase.auth.getSession();
       if(session){
         const {data:profile} = await supabase.from("profiles").select("*").eq("id",session.user.id).single();
         setUser({...session.user,...profile, role: profile?.role || 'user'});
+        if(profile?.role === 'admin' && window.location.pathname === '/admin') setPage('admin');
       }
       const {data:ls} = await supabase.from("listings").select("*").order("created_at",{ascending:false});
       setListings(ls||[]);
